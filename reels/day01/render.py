@@ -186,9 +186,9 @@ def ken_burns(img, t, z0=1.0, z1=1.07, fx=0.5, fy=0.5):
 TOP_GRAD = gradient(0.6, 1000)
 BOT_GRAD = gradient(0.35, 700, bottom=True)
 
-def make_tag():
+def make_tag(day_no="01"):
     """Big "DAY 01" with a small "BUILDING SPOT" line under it."""
-    day = text_layer(["DAY 01"], F_SEMIBOLD, 64, WHITE, tracking=10)
+    day = text_layer([f"DAY {day_no}"], F_SEMIBOLD, 64, WHITE, tracking=10)
     line = text_layer(["BUILDING SPOT"], F_MEDIUM, 28, WHITE, tracking=7)
     w = max(day.width, line.width)
     img = Image.new("RGBA", (w, day.height + line.height + 6), (0, 0, 0, 0))
