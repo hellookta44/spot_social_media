@@ -41,14 +41,17 @@ def serif(size, weight=500, italic=False):
     return f
 
 
-def serif_layer(lines, size, color=WHITE, weight=600, italic=False, line_gap=1.08):
+def serif_layer(lines, size, color=WHITE, weight=600, italic=False, line_gap=1.08, align="center"):
+    """Cormorant text with lining (modern) figures, so "15" never reads as "I5"."""
     f = serif(size, weight, italic)
-    widths = [f.getlength(ln) for ln in lines]
+    feats = ["lnum"]
+    widths = [f.getlength(ln, features=feats) for ln in lines]
     lh = int(size * line_gap)
     img = Image.new("RGBA", (int(max(widths)) + 10, lh * len(lines) + int(size * 0.35)), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     for i, ln in enumerate(lines):
-        d.text(((img.width - widths[i]) / 2, i * lh), ln, font=f, fill=color)
+        x = (img.width - widths[i]) / 2 if align == "center" else 0
+        d.text((x, i * lh), ln, font=f, fill=color, features=feats)
     return img
 
 
@@ -74,9 +77,9 @@ RULE = rule()
 GRADE = "eq=contrast=1.07:saturation=0.95:brightness=0.005,colorbalance=rs=0.025:gs=0.008:bs=-0.025"
 
 
-def footage_frames(name, start, dur, speed=1.0, blur=None):
+def footage_frames(name, start, dur, speed=1.0, blur=None, footage_dir=FOOTAGE):
     """Yield graded 1080x1920 frames. speed < 1 = slow motion. blur = tracked boxes."""
-    src = os.path.join(FOOTAGE, name)
+    src = os.path.join(footage_dir, name)
     n = int(round(dur * FPS))
     src_len = dur * speed + 0.5
     vf = (f"setpts={1 / speed:.4f}*PTS,fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase:"
