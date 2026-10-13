@@ -1,211 +1,238 @@
 #!/usr/bin/env python3
-"""Render the SPOT "Day 2" Instagram Reel: how a sample gets a yes (1080x1920, 30 fps).
+"""Render the SPOT "Day 2" Instagram Reel: how a sample gets a yes (v2).
 
 Usage:  python3 reels/day02/render.py
-Output: reels/day02/out/spot_day02_reel.mp4 (+ _no_music, music .wav, cover .jpg)
+Output: reels/day02/out/spot_day02_reel.mp4 (+ _no_music, music .wav)
+        Cover: python3 reels/covers.py
 
-Reuses the Day 1 look (fonts, tag, stamps, end card) from reels/day01/render.py.
+Follows the 30-day plan (hook "Sample #17582."). Same look as Days 3–5:
+Cormorant Garamond headlines, Inter labels, DAY tag, cream motion graphics,
+real skin-test footage (reels/day03/footage) instead of an animation.
 """
+import importlib.util
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "day01"))
-import render as kit  # noqa: E402  (Day 1 helpers; its footage dir has the dropper clip)
+REELS = os.path.join(HERE, "..")
+_spec = importlib.util.spec_from_file_location("day03_render", os.path.join(REELS, "day03", "render.py"))
+d3 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(d3)
+kit = d3.kit
 
 FOOTAGE = os.path.join(HERE, "footage")
 OUT = os.path.join(HERE, "out")
 W, H, FPS = kit.W, kit.H, kit.FPS
-XFADE, LAST_XFADE = kit.XFADE, kit.LAST_XFADE
-INK, CREAM, WHITE, STAMP_RED = kit.INK, kit.CREAM, kit.WHITE, kit.STAMP_RED
-appear, place, headline, sub = kit.appear, kit.place, kit.headline, kit.sub
+XFADE, LAST_XFADE = d3.XFADE, d3.LAST_XFADE
+INK, CREAM, WHITE, RED = kit.INK, kit.CREAM, kit.WHITE, kit.STAMP_RED
+GOLD = (176, 141, 87)
+place, appear = kit.place, kit.appear
+title, kicker, serif_layer = d3.title, d3.kicker, d3.serif_layer
 
 TAG = kit.make_tag("02")
 
 
-# --------------------------------------------------------------------------- stills
+def frames(day, name, start, dur, speed=1.0):
+    return d3.footage_frames(name, start, dur, speed, None, footage_dir=os.path.join(REELS, day, "footage"))
 
-def prep_still(name, blur_boxes=()):
-    """Load a photo, blur private/brand-revealing areas, cover-crop to 1080x1920, grade."""
+
+def still(name, blur_boxes=()):
+    """Photo → blurred private/label areas → cover-cropped 1080x1920, graded."""
     img = Image.open(os.path.join(FOOTAGE, name)).convert("RGB")
     for box in blur_boxes:
-        region = img.crop(box).filter(ImageFilter.GaussianBlur(14))
-        img.paste(region, box[:2])
+        img.paste(img.crop(box).filter(ImageFilter.GaussianBlur(14)), box[:2])
     s = max(W / img.width, H / img.height)
     img = img.resize((round(img.width * s), round(img.height * s)), Image.LANCZOS)
     x0, y0 = (img.width - W) // 2, (img.height - H) // 2
     img = img.crop((x0, y0, x0 + W, y0 + H))
-    img = ImageEnhance.Contrast(img).enhance(1.05)
-    img = ImageEnhance.Color(img).enhance(0.92)
-    return img
+    return ImageEnhance.Color(ImageEnhance.Contrast(img).enhance(1.06)).enhance(0.93)
 
 
-# Laptop screen (order page) blurred on the pouch photo; "GEL Cleanser" label blurred on the lineup.
-POUCH = prep_still("sample_pouch.jpg", blur_boxes=[(0, 260, 275, 625)])
-SHORTLIST = prep_still("shortlist.jpg", blur_boxes=[(306, 708, 404, 762)])
+POUCH = still("sample_pouch.jpg", [(0, 260, 275, 625)])        # laptop screen blurred
+SHORTLIST = still("shortlist.jpg", [(306, 708, 404, 762)])     # "GEL Cleanser" label blurred
+BOT_GRAD = kit.gradient(0.75, 1150, bottom=True)
 
 
-# --------------------------------------------------------------------------- scene 1: the pouch
+# --------------------------------------------------------------------------- 1. hook: the pouch
 
-S1_H = headline(["Sample #17582."], 92)
-S1_S = sub(["Every sample arrives like this.", "No brand. No name. Just a code."], 44)
-S1_BOT = kit.gradient(0.7, 1100, bottom=True)
+H1 = title(["Sample #17582."], 112)
+H1_K = kicker(["Every sample arrives like this.", "No brand. No name. Just a code."], 42)
 
 
-def s1_overlay(fr, t, T):
+def s_pouch(fr, t, T):
     fr.alpha_composite(kit.TOP_GRAD)
-    fr.alpha_composite(S1_BOT)
+    fr.alpha_composite(BOT_GRAD)
     place(fr, TAG, W / 2, 215, appear(t, 0.0, 0.35), rise=0)
-    place(fr, S1_H, W / 2, 1180, appear(t, 0.15))
-    place(fr, S1_S, W / 2, 1340, appear(t, 1.0))
+    place(fr, H1, W / 2, 1200, appear(t, 0.15, 0.6), rise=30)
+    place(fr, d3.RULE, W / 2, 1300, appear(t, 0.7), rise=0)
+    place(fr, H1_K, W / 2, 1390, appear(t, 0.9))
 
 
-# --------------------------------------------------------------------------- scene 2: checklist
+# --------------------------------------------------------------------------- 2. the five checks
 
-def make_dark_tag():
-    day = kit.text_layer(["DAY 02"], kit.F_SEMIBOLD, 64, INK, tracking=10)
-    line = kit.text_layer(["BUILDING SPOT"], kit.F_MEDIUM, 28, INK, tracking=7)
-    w = max(day.width, line.width)
-    img = Image.new("RGBA", (w, day.height + line.height + 6), (0, 0, 0, 0))
-    img.alpha_composite(day, ((w - day.width) // 2, 0))
-    img.alpha_composite(line, ((w - line.width) // 2, day.height + 6))
-    return img
-
-
-TAG_INK = make_dark_tag()
-C_TITLE = kit.text_layer(["Before any formulation gets a yes,", "it has to pass all five:"],
-                         kit.F_DISPLAY_LIGHT, 58, INK, line_gap=1.2)
+TAG_INK = kit.text_layer(["DAY 02"], kit.F_SEMIBOLD, 64, INK, tracking=10)
+TAG_INK_SUB = kit.text_layer(["BUILDING SPOT"], kit.F_MEDIUM, 28, INK, tracking=7)
+C_TITLE = serif_layer(["Before any formulation", "gets a yes, it must", "pass all five."], 72, INK, weight=600)
 CHECKS = ["Texture", "Absorption", "Feel on skin", "Ingredients", "Fragrance"]
-C_ITEMS = [kit.text_layer([c], kit.F_DISPLAY_LIGHT, 64, INK, align="left") for c in CHECKS]
-FAIL_INDEX = 4
-C_FOOT = kit.text_layer(["One fail and it's out."], kit.F_MEDIUM, 46, INK)
-C_STAMP = kit.stamp("REJECTED", 58, angle=-9)
-ITEM_T0, ITEM_STEP = 0.55, 0.42
-LIST_X, LIST_Y, ROW = 250, 760, 128
+FAIL = 4
+C_NUMS = [serif_layer([f"0{i + 1}"], 64, GOLD, weight=500, italic=True) for i in range(len(CHECKS))]
+C_ITEMS = [serif_layer([c], 68, INK, weight=500, align="left") for c in CHECKS]
+C_FOOT = serif_layer(["One fail and it's out."], 66, INK, weight=500, italic=True)
+C_STAMP = kit.stamp("REJECTED", 50, angle=-8)
+ROW0, ROW = 780, 132
+X_NUM, X_TXT, X_MARK = 190, 270, 900
+ITEM_T0, ITEM_STEP = 0.7, 0.55
+STAMP_T = ITEM_T0 + ITEM_STEP * len(CHECKS) + 0.1
+CARD_DUR = 5.4
 
 
-def mark(ok, progress, size=64):
-    """Animated tick (ink) or cross (red) inside a thin circle."""
+def mark(ok, progress, size=70):
+    """Animated tick (ink) or cross (red) in a thin ring, drawn at 4x for smooth edges."""
     s = 4
     img = Image.new("RGBA", (size * s, size * s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    col = (INK if ok else STAMP_RED) + (255,)
-    d.ellipse([s, s, size * s - s, size * s - s], outline=col, width=3 * s)
+    col = (INK if ok else RED) + (255,)
+    d.ellipse([2 * s, 2 * s, (size - 2) * s, (size - 2) * s], outline=col, width=3 * s)
     k = kit.ease_out(progress)
     lw = 5 * s
+    P = lambda x, y: (x * size * s, y * size * s)  # noqa: E731
     if ok:
-        p0, p1, p2 = (0.28, 0.52), (0.44, 0.68), (0.74, 0.34)
+        a, b, c = (0.28, 0.52), (0.44, 0.68), (0.74, 0.35)
         seg = k * 2
-        a = (p0[0] + (p1[0] - p0[0]) * min(seg, 1), p0[1] + (p1[1] - p0[1]) * min(seg, 1))
-        d.line([tuple(v * size * s for v in p0), tuple(v * size * s for v in a)], fill=col, width=lw)
+        e1 = min(seg, 1)
+        d.line([P(*a), P(a[0] + (b[0] - a[0]) * e1, a[1] + (b[1] - a[1]) * e1)], fill=col, width=lw)
         if seg > 1:
-            b = (p1[0] + (p2[0] - p1[0]) * (seg - 1), p1[1] + (p2[1] - p1[1]) * (seg - 1))
-            d.line([tuple(v * size * s for v in p1), tuple(v * size * s for v in b)], fill=col, width=lw)
+            e2 = seg - 1
+            d.line([P(*b), P(b[0] + (c[0] - b[0]) * e2, b[1] + (c[1] - b[1]) * e2)], fill=col, width=lw)
     else:
-        for (x0, y0, x1, y1) in ((0.3, 0.3, 0.7, 0.7), (0.7, 0.3, 0.3, 0.7)):
-            d.line([(x0 * size * s, y0 * size * s),
-                    ((x0 + (x1 - x0) * k) * size * s, (y0 + (y1 - y0) * k) * size * s)],
-                   fill=col, width=lw)
+        for x0, y0, x1, y1 in ((0.3, 0.3, 0.7, 0.7), (0.7, 0.3, 0.3, 0.7)):
+            d.line([P(x0, y0), P(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k)], fill=col, width=lw)
     return img.resize((size, size), Image.LANCZOS)
 
 
-def s2_frame(t, T):
+def s_checks(t, T):
     fr = Image.new("RGBA", (W, H), CREAM + (255,))
-    place(fr, TAG_INK, W / 2, 215, 1, rise=0)
-    place(fr, C_TITLE, W / 2, 480, appear(t, 0.05))
-    stamp_t = ITEM_T0 + ITEM_STEP * len(CHECKS) + 0.15
-    for i, item in enumerate(C_ITEMS):
+    place(fr, TAG_INK, W / 2, 196, 1, rise=0)
+    place(fr, TAG_INK_SUB, W / 2, 254, 1, rise=0)
+    place(fr, C_TITLE, W / 2, 500, appear(t, 0.05, 0.5))
+    place(fr, Image.new("RGBA", (120, 2), GOLD + (255,)), W / 2, 668, appear(t, 0.4), rise=0)
+    for i in range(len(CHECKS)):
         t0 = ITEM_T0 + i * ITEM_STEP
-        p = appear(t, t0, 0.3)
+        p = appear(t, t0, 0.35)
         if p <= 0:
             continue
-        y = LIST_Y + i * ROW
-        place(fr, item, LIST_X + 110 + item.width / 2, y, p, rise=20)
-        if t >= t0 + 0.18:
-            m = mark(i != FAIL_INDEX, (t - t0 - 0.18) / 0.25)
-            fr.alpha_composite(m, (LIST_X, int(y - m.height / 2)))
-    if t >= stamp_t:
-        k = kit.ease_out((t - stamp_t) / 0.16)
-        place(fr, C_STAMP, 860, LIST_Y + ROW * 4, min(1, k * 1.5), rise=0, scale=1.6 - 0.6 * k)
-    place(fr, C_FOOT, W / 2, LIST_Y + ROW * 5 + 120, appear(t, stamp_t + 0.35))
+        y = ROW0 + i * ROW
+        place(fr, C_NUMS[i], X_NUM, y, p, rise=18)
+        place(fr, C_ITEMS[i], X_TXT + C_ITEMS[i].width / 2, y + 4, p, rise=18)
+        if i < len(CHECKS) - 1:
+            ln = Image.new("RGBA", (int((X_MARK + 40 - X_NUM + 40) * p), 1), INK + (40,))
+            fr.alpha_composite(ln, (X_NUM - 40, int(y + ROW / 2)))
+        if t >= t0 + 0.2:
+            m = mark(i != FAIL, (t - t0 - 0.2) / 0.25)
+            fr.alpha_composite(m, (X_MARK - m.width // 2, int(y - m.height / 2)))
+    if t >= STAMP_T:
+        # Strike through the failed check, then slam the stamp just below it.
+        y = ROW0 + ROW * FAIL - 2
+        strike = kit.ease_out((t - STAMP_T + 0.05) / 0.2)
+        fr.alpha_composite(Image.new("RGBA", (int((C_ITEMS[FAIL].width + 10) * strike), 4), RED + (230,)),
+                           (X_TXT - 5, int(y)))
+        k = kit.ease_out((t - STAMP_T - 0.15) / 0.16)
+        if t >= STAMP_T + 0.15:
+            place(fr, C_STAMP, 700, ROW0 + ROW * FAIL + 92, min(1, k * 1.5), rise=0, scale=1.6 - 0.6 * k)
+    place(fr, C_FOOT, W / 2, ROW0 + ROW * 5 + 130, appear(t, STAMP_T + 0.5))
     return fr
 
 
-# --------------------------------------------------------------------------- scene 3: on skin
+# --------------------------------------------------------------------------- 3–4. real testing
 
-import skin_test  # noqa: E402
-
-skin_frame, SKIN_DUR, SKIN_CUES = skin_test.build(kit, TAG)
-
-
-# --------------------------------------------------------------------------- scene 4: dropper
-
-S3_H = headline(["Pass every test?"], 86)
-S3_S = sub(["Then it earns a second look."], 48)
+H3 = title(["Then we test it", "ourselves."], 104)
+H3_K = kicker(["Look. Smell. Texture."], 42)
 
 
-def s3_overlay(fr, t, T):
-    fr.alpha_composite(kit.TOP_GRAD)
-    place(fr, TAG, W / 2, 215, 1, rise=0)
-    place(fr, S3_H, W / 2, 470, appear(t, 0.15))
-    place(fr, S3_S, W / 2, 600, appear(t, 0.8))
-
-
-# --------------------------------------------------------------------------- scene 5: shortlist countdown
-
-S4_PRE = headline(["From 700+ samples"], 64)
-S4_LABEL = sub(["made the shortlist."], 54)
-COUNT_FROM, COUNT_TO = 700, 6
-
-
-def s4_overlay(fr, t, T):
+def s_inspect(fr, t, T):
     fr.alpha_composite(kit.TOP_GRAD)
     fr.alpha_composite(kit.TOP_GRAD)
     place(fr, TAG, W / 2, 215, 1, rise=0)
-    place(fr, S4_PRE, W / 2, 420, appear(t, 0.1))
-    k = kit.ease_out((t - 0.4) / 1.8)
-    n = round(COUNT_FROM + (COUNT_TO - COUNT_FROM) * k)
-    big = kit.with_shadow(kit.text_layer([f"only {n}" if k >= 1 else str(n)],
-                                         kit.F_DISPLAY_LIGHT, 220, WHITE), 18, 0.55)
-    pop = 1.0 + 0.06 * max(0.0, 1 - (t - 2.2) / 0.25) if t > 2.2 else 1.0
-    place(fr, big, W / 2, 610, appear(t, 0.35, 0.3), rise=20, scale=pop)
-    place(fr, S4_LABEL, W / 2, 790, appear(t, 2.25))
+    place(fr, H3, W / 2, 500, appear(t, 0.15))
+    place(fr, H3_K, W / 2, 690, appear(t, 0.9))
 
 
-# --------------------------------------------------------------------------- scene 6: the question
-
-S5_H = headline(["Only the best will", "carry the SPOT name."], 74)
-S5_S = sub(["Which one would you pick?", "Tell us in the comments."], 46)
+H4_WORDS = ["On skin.", "Rubbed in.", "Felt after."]
+H4_LAYERS = [kit.with_shadow(serif_layer([w], 92), 14, 0.6) for w in H4_WORDS]
 
 
-def s5_overlay(fr, t, T):
+def s_skin(fr, t, T):
     fr.alpha_composite(kit.TOP_GRAD)
     fr.alpha_composite(kit.TOP_GRAD)
     place(fr, TAG, W / 2, 215, 1, rise=0)
-    place(fr, S5_H, W / 2, 470, appear(t, 0.15))
-    place(fr, S5_S, W / 2, 680, appear(t, 1.1))
+    for i, lay in enumerate(H4_LAYERS):
+        place(fr, lay, W / 2, 430 + i * 125, appear(t, 0.15 + i * 0.6), rise=25)
 
 
-# --------------------------------------------------------------------------- scene 7: end card
+# --------------------------------------------------------------------------- 5. second look
 
-E_LINE1 = kit.text_layer(["Day 3: the final cut."], kit.F_DISPLAY_LIGHT, 50, INK)
-E_LINE2 = kit.text_layer(["SKINCARE PRODUCTS · COMING SOON"], kit.F_MEDIUM, 28, (120, 112, 104), tracking=6)
-E_FOLLOW = kit.text_layer(["Follow the journey"], kit.F_DISPLAY_LIGHT, 40, INK)
+H5 = title(["Pass every test?"], 112)
+H5_I = kit.with_shadow(serif_layer(["Then it earns a second look."], 66, italic=True, weight=500), 14, 0.6)
 
 
-def s6_frame(t, T):
+def s_pipette(fr, t, T):
+    fr.alpha_composite(kit.TOP_GRAD)
+    place(fr, TAG, W / 2, 215, 1, rise=0)
+    place(fr, H5, W / 2, 470, appear(t, 0.15))
+    place(fr, H5_I, W / 2, 590, appear(t, 0.9))
+
+
+# --------------------------------------------------------------------------- 6. 700 → 6
+
+S6_PRE = title(["From 700+ samples,"], 76)
+S6_POST = kit.with_shadow(serif_layer(["made the shortlist."], 76, italic=True, weight=500), 14, 0.6)
+COUNT0, COUNT1 = 0.35, 2.15
+
+
+def s_count(fr, t, T):
+    fr.alpha_composite(kit.TOP_GRAD)
+    fr.alpha_composite(kit.TOP_GRAD)
+    place(fr, TAG, W / 2, 215, 1, rise=0)
+    place(fr, S6_PRE, W / 2, 400, appear(t, 0.1))
+    k = kit.ease_out((t - COUNT0) / (COUNT1 - COUNT0))
+    n = round(700 + (6 - 700) * k)
+    big = kit.with_shadow(serif_layer([f"only {n}" if k >= 1 else str(n)], 230), 20, 0.6)
+    pop = 1.0 + 0.07 * max(0.0, 1 - (t - COUNT1) / 0.25) if t > COUNT1 else 1.0
+    place(fr, big, W / 2, 600, appear(t, 0.3, 0.3), rise=20, scale=pop)
+    place(fr, S6_POST, W / 2, 790, appear(t, COUNT1 + 0.1))
+
+
+# --------------------------------------------------------------------------- 7. the question
+
+H7 = title(["Only the best will", "carry the SPOT name."], 92)
+H7_K = kicker(["Which one would you pick?", "Tell us in the comments."], 42)
+
+
+def s_question(fr, t, T):
+    fr.alpha_composite(kit.TOP_GRAD)
+    fr.alpha_composite(kit.TOP_GRAD)
+    place(fr, TAG, W / 2, 215, 1, rise=0)
+    place(fr, H7, W / 2, 480, appear(t, 0.15))
+    place(fr, H7_K, W / 2, 680, appear(t, 1.0))
+
+
+# --------------------------------------------------------------------------- 8. end card
+
+E_NEXT = serif_layer(["Day 3: the final cut."], 58, INK, weight=500, italic=True)
+
+
+def s_end(t, T):
     fr = Image.new("RGBA", (W, H), CREAM + (255,))
     k = appear(t, 0.1, 0.9)
-    place(fr, kit.LOGO, W / 2, 700, k, rise=0, scale=0.94 + 0.06 * k)
-    place(fr, E_LINE1, W / 2, 900, appear(t, 0.7))
-    place(fr, E_LINE2, W / 2, 975, appear(t, 0.9))
+    place(fr, kit.LOGO, W / 2, 690, k, rise=0, scale=0.94 + 0.06 * k)
+    place(fr, E_NEXT, W / 2, 900, appear(t, 0.7))
+    place(fr, d3.E_SOON, W / 2, 985, appear(t, 0.9))
     place(fr, kit.E_RULE, W / 2, 1080, appear(t, 1.2), rise=0)
-    place(fr, E_FOLLOW, W / 2, 1170, appear(t, 1.4))
+    place(fr, d3.E_FOLLOW, W / 2, 1165, appear(t, 1.4))
     place(fr, kit.E_HANDLE, W / 2, 1240, appear(t, 1.6))
     return fr
 
@@ -213,28 +240,26 @@ def s6_frame(t, T):
 # --------------------------------------------------------------------------- timeline
 
 SCENES = [
-    dict(still=POUCH, dur=3.4, overlay=s1_overlay, zoom=(1.0, 1.1), focus=(0.49, 0.3)),
-    dict(card=s2_frame, dur=4.4),
-    dict(card=skin_frame, dur=SKIN_DUR),
-    dict(clip=("serum_dropper.mp4", 1.6, 3.4), overlay=s3_overlay, zoom=(1.04, 1.1)),
-    dict(still=SHORTLIST, dur=3.6, overlay=s4_overlay, zoom=(1.0, 1.06), focus=(0.5, 0.7)),
-    dict(still=SHORTLIST, dur=3.4, overlay=s5_overlay, zoom=(1.14, 1.2), focus=(0.55, 0.75)),
-    dict(card=s6_frame, dur=4.2),
+    dict(still=POUCH, dur=3.4, overlay=s_pouch, zoom=(1.0, 1.12), focus=(0.49, 0.3)),
+    dict(card=s_checks, dur=CARD_DUR),
+    dict(shots=[("day03", "founder_skin_test.mp4", 8.5, 2.8, 0.9)], overlay=s_inspect, zoom=(1.0, 1.06)),
+    dict(shots=[("day03", "founder_skin_test.mp4", 32.0, 3.0, 1.0)], overlay=s_skin, zoom=(1.05, 1.1)),
+    dict(shots=[("day03", "pipette_macro.mp4", 8.0, 2.8, 0.75)], overlay=s_pipette, zoom=(1.0, 1.06)),
+    dict(still=SHORTLIST, dur=3.4, overlay=s_count, zoom=(1.0, 1.06), focus=(0.5, 0.7)),
+    dict(still=SHORTLIST, dur=3.0, overlay=s_question, zoom=(1.12, 1.18), focus=(0.55, 0.75)),
+    dict(card=s_end, dur=4.2),
 ]
 
-# Cue times inside scenes, used by the score.
 CUES = dict(
-    check_times=[ITEM_T0 + i * ITEM_STEP + 0.18 for i in range(len(CHECKS))],
-    fail_index=FAIL_INDEX,
-    stamp=ITEM_T0 + ITEM_STEP * len(CHECKS) + 0.15,
-    drop_land=SKIN_CUES["drop_land"],
-    rub=SKIN_CUES["rub"],
-    count=(0.4, 2.2),
+    checks=[ITEM_T0 + i * ITEM_STEP + 0.2 for i in range(len(CHECKS))],
+    fail=FAIL,
+    stamp=STAMP_T + 0.15,
+    count=(COUNT0, COUNT1),
 )
 
 
 def scene_dur(sc):
-    return sc["clip"][2] if "clip" in sc else sc["dur"]
+    return sc.get("dur") or sum(s[3] for s in sc["shots"])
 
 
 def scene_timing():
@@ -247,17 +272,17 @@ def scene_timing():
     return starts, offset + durs[-1]
 
 
-def render_scene(sc, path, cover_path=None, cover_t=None):
+def render_scene(sc, path):
     enc = kit.encoder(path)
     T = scene_dur(sc)
     n = int(round(T * FPS))
     if "card" in sc:
-        frames = (None for _ in range(n))
+        src = (None for _ in range(n))
     elif "still" in sc:
-        frames = (sc["still"] for _ in range(n))
+        src = (sc["still"] for _ in range(n))
     else:
-        frames = kit.footage_frames(*sc["clip"])
-    for f, img in enumerate(frames):
+        src = (img for day, clip, st, d, sp in sc["shots"] for img in frames(day, clip, st, d, sp))
+    for f, img in enumerate(src):
         t = f / FPS
         if "card" in sc:
             fr = sc["card"](t, T)
@@ -265,15 +290,15 @@ def render_scene(sc, path, cover_path=None, cover_t=None):
             fx, fy = sc.get("focus", (0.5, 0.5))
             fr = kit.ken_burns(img, t / T, *sc["zoom"], fx=fx, fy=fy).convert("RGBA")
             sc["overlay"](fr, t, T)
-        if cover_path and abs(t - cover_t) < 0.5 / FPS:
-            fr.convert("RGB").save(cover_path, quality=92)
         enc.stdin.write(fr.convert("RGB").tobytes())
     enc.stdin.close()
     enc.wait()
 
 
 def main():
-    import score
+    _sspec = importlib.util.spec_from_file_location("day02_score", os.path.join(HERE, "score.py"))
+    score = importlib.util.module_from_spec(_sspec)
+    _sspec.loader.exec_module(score)
 
     os.makedirs(OUT, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="spot_day02_")
