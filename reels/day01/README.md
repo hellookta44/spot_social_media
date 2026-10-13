@@ -22,8 +22,8 @@ a soft beat on the road, a thud on every REJECTED stamp, drums drop out for the
 | 3–7s | On the road | Day 1 didn't start in a lab. / It started on the road — meeting manufacturer after manufacturer. |
 | 7–11s | Sample package at desk | Sample after sample landed on our desk. / Every one opened. Every one tested. |
 | 11–14s | Sample tubes + REJECTED stamps | Most of them? / "Good enough" wasn't good enough. |
-| 14–18s | Serum dropper | Because your skin deserves the one that's right. / Not the one that's easy. |
-| 18–22s | SPOT. end card | Serums & a face cleanser. COMING SOON / Follow the journey from Day 1 @shopspotbeauty |
+| 14–18s | Dropper bottle | Because your skin deserves the one that's right. / Not the one that's easy. |
+| 18–22s | SPOT. end card | Skincare products. COMING SOON / Follow the journey from Day 1 @shopspotbeauty |
 
 ## Instagram caption
 
@@ -38,14 +38,14 @@ would we put this on our own skin?
 
 Most of them didn't make the cut.
 
-Our serums and face cleanser are coming soon — and we're
+Our skincare products are coming soon — and we're
 taking you along for every step of the journey.
 
 Follow @shopspotbeauty so you don't miss Day 2. ✨
 
 #SPOTbeauty #Day1 #BuildingABrand #SkincareBrand #SkincareJourney
-#SmallBusiness #FounderJourney #BehindTheBrand #ComingSoon #Serum
-#FaceCleanser #SkincareLaunch #BrandStory #Startup #Skincare
+#SmallBusiness #FounderJourney #BehindTheBrand #ComingSoon
+#SkincareProducts #SkincareLaunch #BrandStory #Startup #Skincare
 ```
 
 ## Posting tips

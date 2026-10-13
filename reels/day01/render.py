@@ -186,7 +186,18 @@ def ken_burns(img, t, z0=1.0, z1=1.07, fx=0.5, fy=0.5):
 TOP_GRAD = gradient(0.6, 1000)
 BOT_GRAD = gradient(0.35, 700, bottom=True)
 
-TAG = with_shadow(text_layer(["DAY 01  ·  BUILDING SPOT"], F_MEDIUM, 30, WHITE, tracking=5), 8, 0.4)
+def make_tag():
+    """Big "DAY 01" with a small "BUILDING SPOT" line under it."""
+    day = text_layer(["DAY 01"], F_SEMIBOLD, 64, WHITE, tracking=10)
+    line = text_layer(["BUILDING SPOT"], F_MEDIUM, 28, WHITE, tracking=7)
+    w = max(day.width, line.width)
+    img = Image.new("RGBA", (w, day.height + line.height + 6), (0, 0, 0, 0))
+    img.alpha_composite(day, ((w - day.width) // 2, 0))
+    img.alpha_composite(line, ((w - line.width) // 2, day.height + 6))
+    return with_shadow(img, 12, 0.65)
+
+
+TAG = make_tag()
 
 
 def headline(lines, size=78):
@@ -204,7 +215,7 @@ S1_PRE = headline(["We said no to"], 64)
 
 def s1_overlay(fr, t, T):
     fr.alpha_composite(TOP_GRAD)
-    place(fr, TAG, W / 2, 250, appear(t, 0.0, 0.35), rise=0)
+    place(fr, TAG, W / 2, 215, appear(t, 0.0, 0.35), rise=0)
     place(fr, S1_PRE, W / 2, 600, appear(t, 0.1))
     k = ease_out((t - 0.25) / 1.6)
     n = int(round(700 * k))
@@ -222,7 +233,7 @@ S2_S = sub(["It started on the road —", "meeting manufacturer after manufactur
 
 def s2_overlay(fr, t, T):
     fr.alpha_composite(TOP_GRAD)
-    place(fr, TAG, W / 2, 250, 1, rise=0)
+    place(fr, TAG, W / 2, 215, 1, rise=0)
     place(fr, S2_H, W / 2, 470, appear(t, 0.15))
     place(fr, S2_S, W / 2, 680, appear(t, 0.9))
 
@@ -234,7 +245,7 @@ S3_S = sub(["Every one opened. Every one tested."])
 
 def s3_overlay(fr, t, T):
     fr.alpha_composite(TOP_GRAD)
-    place(fr, TAG, W / 2, 250, 1, rise=0)
+    place(fr, TAG, W / 2, 215, 1, rise=0)
     place(fr, S3_H, W / 2, 470, appear(t, 0.15))
     place(fr, S3_S, W / 2, 660, appear(t, 0.9))
 
@@ -252,7 +263,7 @@ S4_S = sub(["“Good enough” wasn't good enough."], 44)
 def s4_overlay(fr, t, T):
     fr.alpha_composite(TOP_GRAD)
     fr.alpha_composite(BOT_GRAD)
-    place(fr, TAG, W / 2, 250, 1, rise=0)
+    place(fr, TAG, W / 2, 215, 1, rise=0)
     place(fr, S4_H, W / 2, 440, appear(t, 0.1))
     for img, x, y, t0 in STAMPS:
         if t >= t0:
@@ -268,7 +279,7 @@ S5_S = sub(["Not the one that's easy."])
 
 def s5_overlay(fr, t, T):
     fr.alpha_composite(TOP_GRAD)
-    place(fr, TAG, W / 2, 250, 1, rise=0)
+    place(fr, TAG, W / 2, 215, 1, rise=0)
     place(fr, S5_H, W / 2, 520, appear(t, 0.15))
     place(fr, S5_S, W / 2, 760, appear(t, 1.2))
 
@@ -281,7 +292,7 @@ def load_logo(width):
 
 
 LOGO = load_logo(640)
-E_LINE1 = text_layer(["Serums & a face cleanser."], F_DISPLAY_LIGHT, 50, INK)
+E_LINE1 = text_layer(["Skincare products."], F_DISPLAY_LIGHT, 50, INK)
 E_LINE2 = text_layer(["COMING SOON"], F_MEDIUM, 30, (120, 112, 104), tracking=8)
 E_FOLLOW = text_layer(["Follow the journey from Day 1"], F_DISPLAY_LIGHT, 40, INK)
 E_HANDLE = text_layer([HANDLE], F_MEDIUM, 40, INK, tracking=1)
