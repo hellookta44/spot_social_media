@@ -277,8 +277,7 @@ def main():
     parts = []
     for i, sc in enumerate(SCENES):
         p = os.path.join(tmp, f"scene{i}.mp4")
-        cover = os.path.join(OUT, "spot_day03_cover.jpg") if i == 0 else None
-        render_scene(sc, p, cover, cover_t=2.6)
+        render_scene(sc, p)
         parts.append(p)
         print(f"scene {i + 1}/{len(SCENES)} rendered ({scene_dur(sc):.1f}s)")
 

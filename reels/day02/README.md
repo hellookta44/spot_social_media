@@ -52,6 +52,7 @@ Day 3: the final cut. Follow @shopspotbeauty ✨
 
 ```
 python3 reels/day02/render.py
+python3 reels/covers.py      # designed covers for every day
 ```
 
 Uses the Day 1 helpers in `reels/day01/render.py` and instruments in `reels/day01/music.py`.

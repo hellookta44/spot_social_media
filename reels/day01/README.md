@@ -58,6 +58,7 @@ Follow @shopspotbeauty so you don't miss Day 2. ✨
 
 ```
 python3 reels/day01/render.py
+python3 reels/covers.py      # designed covers for every day
 ```
 
 All text, timings and clip choices live in `render.py` (see `SCENES`).

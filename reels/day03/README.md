@@ -50,4 +50,5 @@ Follow @shopspotbeauty for Day 4 ✨
 
 ```
 python3 reels/day03/render.py
+python3 reels/covers.py      # designed covers for every day
 ```
