@@ -2,7 +2,7 @@
 
 Same instruments as Day 1 (reels/day01/music.py) so the series sounds related,
 but a brighter C major progression and new cues: a tick on every checklist
-tick, a thud on the REJECTED stamp, a falling countdown, and a hit on "only 6".
+tick, a thud on the REJECTED stamp, a drop and swish for the skin test, a falling countdown, and a hit on "only 6".
 """
 import os
 import sys
@@ -47,7 +47,7 @@ def groove(tr, t0, bars, names, bar, drums=True):
 
 
 def compose(starts, total, cues, path):
-    s1, s2, s3, s4, s5, s6 = starts
+    s1, s2, sk, s3, s4, s5, s6 = starts
     tr = m.Track(total + 0.5)
 
     # Scene 1: pouch — soft intro, pad + sparse keys, a bell on the sample number.
@@ -57,16 +57,21 @@ def compose(starts, total, cues, path):
         tr.add(1.1 + k * 0.32, m.epiano(note, 1.6, 0.7), 0.10, pan=-0.3 + 0.2 * k, verb=0.5)
     tr.add(s2 - 0.45, m.whoosh(0.6), 0.10, verb=0.2)
 
-    # Scenes 2–3: groove under the checklist and dropper (C – G – Am – F).
-    bar = (s4 - s2) / 4
-    groove(tr, s2, 4, ["C", "G", "Am", "F"], bar)
+    # Scenes 2–4: groove under the checklist, skin test and dropper (C – G – Am – F – C).
+    bar = (s4 - s2) / 5
+    groove(tr, s2, 5, ["C", "G", "Am", "F", "C"], bar)
     for i, tc in enumerate(cues["check_times"]):
         if i == cues["fail_index"]:
             tr.add(s2 + tc, m.tick(84), 0.14, verb=0.2)          # lower, "wrong" blip
         else:
             tr.add(s2 + tc, m.tick(96 + 2 * i), 0.12, pan=0.2, verb=0.2)
     tr.add(s2 + cues["stamp"], m.thud(), 0.45, verb=0.25)
-    tr.add(s3 - 0.35, m.whoosh(0.5), 0.06, verb=0.2)
+    for t in (sk, s3):
+        tr.add(t - 0.35, m.whoosh(0.5), 0.06, verb=0.2)
+    # Skin test: a soft "plip" when the drop lands, an airy swish for the swipe.
+    tr.add(sk + cues["drop_land"], m.tick(88), 0.16, verb=0.5)
+    tr.add(sk + cues["drop_land"], m.bell(91, 2.0), 0.05, verb=0.7)
+    tr.add(sk + cues["swipe"], m.whoosh(1.2), 0.08, pan=0.3, verb=0.4)
 
     # Scene 4: countdown 700 -> 6, falling ticks, hit on landing.
     c0, c1 = cues["count"]
