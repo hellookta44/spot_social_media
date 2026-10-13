@@ -139,7 +139,7 @@ def s_dash(fr, t, T):
     place(fr, H7, W / 2, 500, appear(t, 0.15))
 
 
-E_NEXT = serif_layer(["Day 5: what 700 no's look like."], 58, INK, weight=500, italic=True)
+E_NEXT = serif_layer(["Day 5: behind the formula."], 58, INK, weight=500, italic=True)
 
 
 def s_end(t, T):

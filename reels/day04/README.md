@@ -20,7 +20,7 @@ Same look as Day 3: Cormorant Garamond headlines (lining figures), Inter labels,
 | 13–18s | Motion graphic (cream card) | **What 15 factories taught us:** 01 A great sample isn't a great batch. 02 Clean floors tell you more than brochures. 03 Good formulas can't be rushed. | Bell per lesson |
 | 18–21s | Dropper in sunlight | **Only the best get to make SPOT.** | Drop plips |
 | 21–23s | Sample on the dashboard | **The journey continues.** | Groove |
-| 23–27s | SPOT. end card | *Day 5: what 700 no's look like.* SKINCARE PRODUCTS · COMING SOON / @shopspotbeauty | Resolve + bell |
+| 23–27s | SPOT. end card | *Day 5: behind the formula.* SKINCARE PRODUCTS · COMING SOON / @shopspotbeauty | Resolve + bell |
 
 The three lessons were written for the reel; edit them in `LESSONS` in `render.py` if you want your own wording.
 
@@ -41,7 +41,7 @@ What 15 factories taught us:
 
 Only the best get to make SPOT.
 
-Tomorrow: what 700 no's look like 👀
+Tomorrow: behind the formula 👀
 Follow @shopspotbeauty for Day 5 ✨
 
 #SPOTbeauty #Day4 #BuildingABrand #SkincareBrand #SkincareJourney

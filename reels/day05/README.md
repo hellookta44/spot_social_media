@@ -1,43 +1,55 @@
-# SPOT — Day 5 Reel: "What 700 no's look like"
+# SPOT — Day 5 Reel: "Behind the formula"
 
 | File | What it is |
 |---|---|
-| `out/spot_day05_reel.mp4` | Final reel with original music + sound effects (1080×1920, 30 fps, 22.5s) |
+| `out/spot_day05_reel.mp4` | Final reel with original music + sound design (1080×1920, 30 fps, 27s) |
 | `out/spot_day05_reel_no_music.mp4` | Same reel, silent — for a trending sound in Instagram |
 | `out/spot_day05_music.wav` | Score + sound design on its own (`score.py`) |
-| `out/spot_day05_cover.jpg` | Designed cover ("700 no's. and only 6 yes.") — made by `reels/covers.py` |
+| `out/spot_day05_cover.jpg` | Designed cover ("Behind the formula.") — made by `reels/covers.py` |
 
-No new footage: earlier clips (new crops / unused sections) plus a data motion graphic.
+Three chapters: **01 Factory visits · 02 Formulation testing · 03 Chemist consultations.**
 
 ## Storyboard
 
 | Time | Visual | On-screen text | Sound |
 |---|---|---|---|
-| 0–3s | Rejected tubes (Day 1 clip), out of focus so no brand is readable | **What do 700 no's look like?** | Pad, two piano notes |
-| 3–12s | Motion graphic: 700 dots land one by one (one dot = one sample), counter to 700+; then all fade except 6 gold dots, which glide into a row | **0 → 700+** samples rejected → **Only 6 made the shortlist.** That's less than 1%. | Tick patter that speeds up, impact on 700+, downward "dim", six bell notes, chord bloom |
-| 12–15s | Shortlist photo (label blurred) | **Those 6 are still being tested.** Not every one will make it. | Groove, glass clink |
-| 15–18s | Pink pipette macro (unused section) | **Saying no is how we'll earn your yes.** | Drop plip |
-| 18–22.5s | SPOT. end card | *Day 6: a day building SPOT.* | Resolve + bell |
+| 0–3s | Serum drop on skin (Pexels clip) | **What goes into one drop?** | Drop plip, shimmer, riser |
+| 3–6s | Arriving at a factory (founder footage) | *01* FACTORY VISITS — **15 factories. Every one in person.** | Beat starts, car-door thud |
+| 6–11s | Framed photo cards on cream: production line → raw materials → filling line (other brand's tube text blurred) | Production lines, checked up close. / Raw materials, inspected at the source. / Filling and hygiene, seen with our own eyes. | Camera shutter on each photo |
+| 11–14s | Pink pipette macro | *02* FORMULATION TESTING — **Batch after batch, drop by drop.** | Piano hook enters, plips |
+| 14–17s | Serum patted into skin (Pexels clip) | **How it absorbs. / How it feels. / How it lasts.** | Soft swish, ticks |
+| 17–21s | Motion graphic: molecule drawing itself in gold | *03* CHEMIST CONSULTATIONS — **Every ingredient questioned.** *Every claim checked with chemists.* | Drums out, node ticks, glass clinks, riser |
+| 21–23s | Serum drop on skin | **All this, before one drop reaches you.** | Impact + bell, full groove |
+| 23–27s | SPOT. end card | *Day 6: what 700 no's look like.* | Resolve + shimmer |
+
+Music: 96 BPM, Dm – Bb – F – C, piano hook doubled by bell, sidechain-pumped pad,
+kick, snaps, shaker (same production as Day 2 v2; all synthesised).
+
+**Media notes:** `serum_application_pexels.mp4` is a Pexels clip (free for commercial
+use under the Pexels licence). The three factory photos were supplied as-is — make
+sure SPOT has the right to use them; if they are not from your own visits, swap in
+your own photos when you have them (same filenames, then re-render).
 
 ## Instagram caption
 
 ```
 Day 5 of building SPOT. 🤍
 
-What do 700 no's look like?
+What goes into one drop?
 
-Every dot is one sample we tested and turned down.
-700+ of them. Only 6 made the shortlist — less than 1%.
+01 Factory visits — 15 factories, every one in person.
+02 Formulation testing — batch after batch, drop by drop.
+03 Chemist consultations — every ingredient questioned,
+   every claim checked.
 
-And those 6 are still being tested.
-Saying no is how we'll earn your yes.
+All this, before one drop reaches you.
 
-Tomorrow: a day building SPOT, 6am to midnight.
+Tomorrow: what 700 no's look like 👀
 Follow @shopspotbeauty for Day 6 ✨
 
 #SPOTbeauty #Day5 #BuildingABrand #SkincareBrand #SkincareJourney
-#BehindTheBrand #FounderJourney #QualityFirst #ComingSoon
-#SkincareProducts #SmallBusiness #Skincare
+#BehindTheBrand #FormulationTesting #CosmeticChemist #FactoryVisit
+#ComingSoon #SkincareProducts #SmallBusiness
 ```
 
 ## Re-render

@@ -15,13 +15,13 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location("day05_render", os.path.join(HERE, "day05", "render.py"))
-d5 = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(d5)
-d3, kit = d5.d3, d5.kit
+_spec = importlib.util.spec_from_file_location("day06_render", os.path.join(HERE, "day06", "render.py"))
+d6 = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(d6)
+d3, kit = d6.d3, d6.kit
 
 W, H = kit.W, kit.H
-WHITE, INK, CREAM, GOLD = kit.WHITE, kit.INK, kit.CREAM, d5.GOLD
+WHITE, INK, CREAM, GOLD = kit.WHITE, kit.INK, kit.CREAM, d6.GOLD
 SAFE_TOP, SAFE_BOT = 285, 1635  # 4:5 grid crop
 LOGO_WHITE = Image.open(os.path.join(HERE, "..", "brand", "spot_logo_white.png")).convert("RGBA")
 LOGO_DARK = Image.open(os.path.join(HERE, "..", "brand", "spot_logo_dark.png")).convert("RGBA")
@@ -98,7 +98,7 @@ def cover_day01():
 
 
 def cover_day02():
-    bg = cinematic(d5.SHORT_IMG, zoom=1.05, focus=(0.5, 0.35))
+    bg = cinematic(d6.SHORT_IMG, zoom=1.05, focus=(0.5, 0.35))
     return compose(bg, "02", ["Only 6"], "made the shortlist.", big_size=250)
 
 
@@ -113,28 +113,33 @@ def cover_day04():
 
 
 def cover_day05():
+    bg = cinematic(grab("day05", "serum_application_pexels.mp4", 6.5), zoom=1.06, focus=(0.4, 0.4))
+    return compose(bg, "05", ["Behind the", "formula."], "factories · testing · chemists.", big_size=180)
+
+
+def cover_day06():
     """Cream data cover: a compact 700-dot grid, six gold, '700 no's.' in ink."""
     fr = Image.new("RGBA", (W, H), CREAM + (255,))
-    kit.place(fr, badge("05", INK), W / 2, SAFE_TOP + 110, rise=0)
+    kit.place(fr, badge("06", INK), W / 2, SAFE_TOP + 110, rise=0)
     big = tight(d3.serif_layer(["700 no's."], 170, INK, weight=600))
     place_box(fr, big, W / 2, top=SAFE_TOP + 200)
-    cols, rows, gap = d5.COLS, d5.ROWS, 26
+    cols, rows, gap = d6.COLS, d6.ROWS, 26
     x0 = (W - (cols - 1) * gap) / 2
     y0 = SAFE_TOP + 200 + big.height + 80
-    faded = d5.dot_sprite(8, (196, 186, 175))
-    gold = d5.dot_sprite(11, GOLD, glow=True)
+    faded = d6.dot_sprite(8, (196, 186, 175))
+    gold = d6.dot_sprite(11, GOLD, glow=True)
     for idx in range(cols * rows):
-        if idx not in d5.CHOSEN:
-            d5.paste_center(fr, faded, x0 + (idx % cols) * gap, y0 + (idx // cols) * gap)
-    for idx in d5.CHOSEN:
-        d5.paste_center(fr, gold, x0 + (idx % cols) * gap, y0 + (idx // cols) * gap)
+        if idx not in d6.CHOSEN:
+            d6.paste_center(fr, faded, x0 + (idx % cols) * gap, y0 + (idx // cols) * gap)
+    for idx in d6.CHOSEN:
+        d6.paste_center(fr, gold, x0 + (idx % cols) * gap, y0 + (idx // cols) * gap)
     line = tight(d3.serif_layer(["and only 6 yes."], 74, GOLD, weight=500, italic=True))
     place_box(fr, line, W / 2, top=y0 + (rows - 1) * gap + 50)
     place_box(fr, logo(170, dark=True), W / 2, bottom=SAFE_BOT - 30)
     return fr.convert("RGB")
 
 
-COVERS = {"01": cover_day01, "02": cover_day02, "03": cover_day03, "04": cover_day04, "05": cover_day05}
+COVERS = {"01": cover_day01, "02": cover_day02, "03": cover_day03, "04": cover_day04, "05": cover_day05, "06": cover_day06}
 
 
 def main():
