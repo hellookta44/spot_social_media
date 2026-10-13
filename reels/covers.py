@@ -134,7 +134,7 @@ def cover_day06():
     for idx in d6.CHOSEN:
         d6.paste_center(fr, gold, x0 + (idx % cols) * gap, y0 + (idx // cols) * gap)
     line = tight(d3.serif_layer(["and only 6 yes."], 74, GOLD, weight=500, italic=True))
-    place_box(fr, line, W / 2, top=y0 + (rows - 1) * gap + 50)
+    place_box(fr, line, W / 2, top=y0 + (rows - 1) * gap + 110)
     place_box(fr, logo(170, dark=True), W / 2, bottom=SAFE_BOT - 30)
     return fr.convert("RGB")
 
