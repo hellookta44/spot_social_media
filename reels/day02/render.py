@@ -138,92 +138,9 @@ def s2_frame(t, T):
 
 # --------------------------------------------------------------------------- scene 3: on skin
 
-def _skin_base():
-    """Warm skin-tone backdrop with soft pore texture and vignette."""
-    import numpy as np
-    y = np.linspace(0, 1, H)[:, None, None]
-    top, bot = np.array([236, 200, 172]), np.array([214, 166, 136])
-    img = top * (1 - y) + bot * y
-    img = np.repeat(img, W, axis=1)
-    rng = np.random.default_rng(3)
-    noise = Image.fromarray((rng.standard_normal((H // 3, W // 3)) * 40 + 128).clip(0, 255).astype("uint8"))
-    noise = np.array(noise.resize((W, H), Image.BICUBIC).filter(ImageFilter.GaussianBlur(2)), dtype=float)
-    img += ((noise - 128) / 128 * 7)[..., None]
-    yy, xx = np.mgrid[0:H, 0:W]
-    v = ((xx - W / 2) / W) ** 2 + ((yy - H * 0.55) / H) ** 2
-    img *= (1 - 0.55 * v)[..., None]
-    return Image.fromarray(img.clip(0, 255).astype("uint8")).convert("RGBA")
+import skin_test  # noqa: E402
 
-
-SKIN = _skin_base()
-DROP_X, LAND_Y = W / 2, 1080
-T_FALL, T_LAND, T_SWIPE, T_GONE = 0.35, 0.75, 1.55, 3.0
-
-
-def blob(w, h, alpha):
-    """Glossy translucent product blob: soft body, darker rim, specular highlight."""
-    pad = 60
-    img = Image.new("RGBA", (int(w) + 2 * pad, int(h) + 2 * pad), (0, 0, 0, 0))
-    box = [pad, pad, pad + w, pad + h]
-    shadow = Image.new("L", img.size, 0)
-    ImageDraw.Draw(shadow).ellipse([box[0] + 6, box[1] + 14, box[2] + 6, box[3] + 14], fill=int(90 * alpha))
-    img.paste((120, 70, 50, 255), (0, 0), shadow.filter(ImageFilter.GaussianBlur(14)))
-    body = Image.new("L", img.size, 0)
-    ImageDraw.Draw(body).ellipse(box, fill=int(150 * alpha))
-    img.alpha_composite(Image.merge("RGBA", [Image.new("L", img.size, v) for v in (250, 246, 240)]
-                                    + [body.filter(ImageFilter.GaussianBlur(5))]))
-    hl = Image.new("L", img.size, 0)
-    ImageDraw.Draw(hl).ellipse([box[0] + w * 0.22, box[1] + h * 0.16, box[0] + w * 0.5, box[1] + h * 0.38],
-                               fill=int(235 * alpha))
-    img.alpha_composite(Image.merge("RGBA", [Image.new("L", img.size, 255)] * 3
-                                    + [hl.filter(ImageFilter.GaussianBlur(6))]))
-    return img
-
-
-def drop(alpha=1.0, size=70):
-    """Falling teardrop."""
-    pad = 30
-    img = Image.new("RGBA", (size + 2 * pad, int(size * 1.5) + 2 * pad), (0, 0, 0, 0))
-    m = Image.new("L", img.size, 0)
-    d = ImageDraw.Draw(m)
-    d.ellipse([pad, pad + size * 0.5, pad + size, pad + size * 1.5], fill=int(170 * alpha))
-    d.polygon([(pad + size * 0.5, pad), (pad + size * 0.08, pad + size * 0.9),
-               (pad + size * 0.92, pad + size * 0.9)], fill=int(170 * alpha))
-    img.alpha_composite(Image.merge("RGBA", [Image.new("L", img.size, 250)] * 3 + [m.filter(ImageFilter.GaussianBlur(3))]))
-    hl = Image.new("L", img.size, 0)
-    ImageDraw.Draw(hl).ellipse([pad + size * 0.25, pad + size * 0.75, pad + size * 0.45, pad + size * 1.05],
-                               fill=int(230 * alpha))
-    img.alpha_composite(Image.merge("RGBA", [Image.new("L", img.size, 255)] * 3 + [hl.filter(ImageFilter.GaussianBlur(3))]))
-    return img
-
-
-SK_H = headline(["Then it goes on skin."], 80)
-SK_S = sub(["How it spreads. How it absorbs.", "How it feels after."], 44)
-
-
-def skin_frame(t, T):
-    fr = SKIN.copy()
-    fr.alpha_composite(kit.TOP_GRAD)
-    if T_FALL <= t < T_LAND:
-        k = ((t - T_FALL) / (T_LAND - T_FALL)) ** 2
-        dimg = drop(size=90)
-        y = 780 + (LAND_Y - 780) * k
-        fr.alpha_composite(dimg, (int(DROP_X - dimg.width / 2), int(y - dimg.height)))
-    elif t >= T_LAND:
-        land = kit.ease_out((t - T_LAND) / 0.45)
-        w, h = 90 + 250 * land, 50 + 100 * land
-        alpha = 1.0
-        if t >= T_SWIPE:  # finger-swipe: stretch sideways, thin out, absorb
-            k = kit.ease_in_out((t - T_SWIPE) / (T_GONE - T_SWIPE))
-            w, h = 340 + 380 * k, 150 - 90 * k
-            alpha = 1 - 0.85 * k
-        b = blob(w, h, alpha)
-        cx = DROP_X + (90 * kit.ease_in_out((t - T_SWIPE) / (T_GONE - T_SWIPE)) if t >= T_SWIPE else 0)
-        fr.alpha_composite(b, (int(cx - b.width / 2), int(LAND_Y - h / 2 - 60)))
-    place(fr, TAG, W / 2, 215, 1, rise=0)
-    place(fr, SK_H, W / 2, 470, appear(t, 0.1))
-    place(fr, SK_S, W / 2, 640, appear(t, 0.9))
-    return fr
+skin_frame, SKIN_DUR, SKIN_CUES = skin_test.build(kit, TAG)
 
 
 # --------------------------------------------------------------------------- scene 4: dropper
@@ -298,7 +215,7 @@ def s6_frame(t, T):
 SCENES = [
     dict(still=POUCH, dur=3.4, overlay=s1_overlay, zoom=(1.0, 1.1), focus=(0.49, 0.3)),
     dict(card=s2_frame, dur=4.4),
-    dict(card=skin_frame, dur=3.6),
+    dict(card=skin_frame, dur=SKIN_DUR),
     dict(clip=("serum_dropper.mp4", 1.6, 3.4), overlay=s3_overlay, zoom=(1.04, 1.1)),
     dict(still=SHORTLIST, dur=3.6, overlay=s4_overlay, zoom=(1.0, 1.06), focus=(0.5, 0.7)),
     dict(still=SHORTLIST, dur=3.4, overlay=s5_overlay, zoom=(1.14, 1.2), focus=(0.55, 0.75)),
@@ -310,8 +227,8 @@ CUES = dict(
     check_times=[ITEM_T0 + i * ITEM_STEP + 0.18 for i in range(len(CHECKS))],
     fail_index=FAIL_INDEX,
     stamp=ITEM_T0 + ITEM_STEP * len(CHECKS) + 0.15,
-    drop_land=T_LAND,
-    swipe=T_SWIPE,
+    drop_land=SKIN_CUES["drop_land"],
+    rub=SKIN_CUES["rub"],
     count=(0.4, 2.2),
 )
 

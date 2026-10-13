@@ -68,10 +68,11 @@ def compose(starts, total, cues, path):
     tr.add(s2 + cues["stamp"], m.thud(), 0.45, verb=0.25)
     for t in (sk, s3):
         tr.add(t - 0.35, m.whoosh(0.5), 0.06, verb=0.2)
-    # Skin test: a soft "plip" when the drop lands, an airy swish for the swipe.
+    # Skin test: a soft "plip" when the drop lands, an airy swish while it is rubbed in.
     tr.add(sk + cues["drop_land"], m.tick(88), 0.16, verb=0.5)
     tr.add(sk + cues["drop_land"], m.bell(91, 2.0), 0.05, verb=0.7)
-    tr.add(sk + cues["swipe"], m.whoosh(1.2), 0.08, pan=0.3, verb=0.4)
+    r0, r1 = cues["rub"]
+    tr.add(sk + r0, m.whoosh(r1 - r0), 0.07, pan=0.3, verb=0.4)
 
     # Scene 4: countdown 700 -> 6, falling ticks, hit on landing.
     c0, c1 = cues["count"]
