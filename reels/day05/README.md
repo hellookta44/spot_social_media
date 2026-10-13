@@ -20,7 +20,7 @@ Three chapters: **01 Factory visits · 02 Formulation testing · 03 Chemist cons
 | 14–17s | Serum patted into skin (Pexels clip) | **How it absorbs. / How it feels. / How it lasts.** | Soft swish, ticks |
 | 17–21s | Motion graphic: molecule drawing itself in gold | *03* CHEMIST CONSULTATIONS — **Every ingredient questioned.** *Every claim checked with chemists.* | Drums out, node ticks, glass clinks, riser |
 | 21–23s | Serum drop on skin | **All this, before one drop reaches you.** | Impact + bell, full groove |
-| 23–27s | SPOT. end card | *Day 6: what 700 no's look like.* | Resolve + shimmer |
+| 23–27s | SPOT. end card | *Day 6: what 29 no's look like.* | Resolve + shimmer |
 
 Music: 96 BPM, Dm – Bb – F – C, piano hook doubled by bell, sidechain-pumped pad,
 kick, snaps, shaker (same production as Day 2 v2; all synthesised).
@@ -44,7 +44,7 @@ What goes into one drop?
 
 All this, before one drop reaches you.
 
-Tomorrow: what 700 no's look like 👀
+Tomorrow: what 29 no's look like 👀
 Follow @shopspotbeauty for Day 6 ✨
 
 #SPOTbeauty #Day5 #BuildingABrand #SkincareBrand #SkincareJourney

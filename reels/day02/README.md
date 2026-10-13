@@ -20,7 +20,7 @@ Cormorant Garamond headlines, cream motion graphics, and real skin-test footage
 | 8–11s | Founder inspecting the bottle and dropper | **Then we test it ourselves.** Look. Smell. Texture. | Piano hook enters, drop plip |
 | 11–14s | Fingertip testing on the hand | **On skin. / Rubbed in. / Felt after.** (word by word) | Rubbing swish, soft ticks |
 | 14–16s | Pink pipette macro | **Pass every test?** *Then it earns a second look.* | Breakdown: piano hook alone, riser |
-| 16–19s | Shortlist photo ("GEL Cleanser" label blurred) | From 700+ samples, **700 → only 6** *made the shortlist.* | Falling ticks, impact + bell on "only 6", full groove |
+| 16–19s | Shortlist photo ("GEL Cleanser" label blurred) | From 35 samples, **35 → only 6** *made the shortlist.* | Falling ticks, impact + bell on "only 6", full groove |
 | 19–22s | Shortlist photo, closer | **Only the best will carry the SPOT name.** Which one would you pick? Tell us in the comments. | Groove + hook |
 | 22–26s | SPOT. end card | *Day 3: the final cut.* SKINCARE PRODUCTS · COMING SOON / @shopspotbeauty | Fmaj9 resolve + shimmer |
 
@@ -39,7 +39,7 @@ Then the formulation has to pass five checks: texture,
 absorption, feel on skin, ingredients and fragrance.
 Fail one, and it's out.
 
-From 700+ samples, only 6 made the shortlist.
+From 35 samples, only 6 made the shortlist.
 Only the best will carry the SPOT name.
 
 Which one would you pick? Tell us below 👇

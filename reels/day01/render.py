@@ -208,9 +208,10 @@ def sub(lines, size=40):
     return with_shadow(text_layer(lines, F_MEDIUM, size, (240, 236, 230), line_gap=1.3), 10, 0.5)
 
 
-# Scene 1 — hook: 700+ counter over the rejected samples
-S1_LABEL = sub(["samples rejected."], 54)
-S1_PRE = headline(["We said no to"], 64)
+# Scene 1 — hook: 0 → 35 counter over the rejected samples
+SAMPLES = 35
+S1_LABEL = sub(["samples received.", "Most of them got a no."], 50)
+S1_PRE = headline(["We received"], 64)
 
 
 def s1_overlay(fr, t, T):
@@ -218,12 +219,11 @@ def s1_overlay(fr, t, T):
     place(fr, TAG, W / 2, 215, appear(t, 0.0, 0.35), rise=0)
     place(fr, S1_PRE, W / 2, 600, appear(t, 0.1))
     k = ease_out((t - 0.25) / 1.6)
-    n = int(round(700 * k))
-    label = f"{n}+" if k >= 1 else f"{n}"
+    label = str(int(round(SAMPLES * k)))
     big = with_shadow(text_layer([label], F_DISPLAY_LIGHT, 300, WHITE), 18, 0.5)
     pop = 1.0 + 0.06 * max(0.0, 1 - (t - 1.85) / 0.25) if t > 1.85 else 1.0
     place(fr, big, W / 2, 850, appear(t, 0.2, 0.3), rise=20, scale=pop)
-    place(fr, S1_LABEL, W / 2, 1090, appear(t, 1.0))
+    place(fr, S1_LABEL, W / 2, 1110, appear(t, 1.0))
 
 
 # Scene 2 — on the road

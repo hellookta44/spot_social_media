@@ -236,7 +236,7 @@ def s_standard(fr, t, T):
 
 # --------------------------------------------------------------------------- 8. end card
 
-E_NEXT = serif_layer(["Day 6: what 700 no's look like."], 58, INK, weight=500, italic=True)
+E_NEXT = serif_layer(["Day 6: what 29 no's look like."], 58, INK, weight=500, italic=True)
 
 
 def s_end(t, T):

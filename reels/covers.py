@@ -94,7 +94,7 @@ def compose(bg, day, big, line, big_size=300, dark=False):
 
 def cover_day01():
     bg = cinematic(grab("day01", "rejected_samples.mp4", 1.4, defocus=7), zoom=1.08)
-    return compose(bg, "01", ["700+"], "samples rejected.", big_size=330)
+    return compose(bg, "01", ["35"], "samples received.", big_size=360)
 
 
 def cover_day02():
@@ -118,16 +118,16 @@ def cover_day05():
 
 
 def cover_day06():
-    """Cream data cover: a compact 700-dot grid, six gold, '700 no's.' in ink."""
+    """Cream data cover: the 35-dot grid, six gold, '29 no's.' in ink."""
     fr = Image.new("RGBA", (W, H), CREAM + (255,))
     kit.place(fr, badge("06", INK), W / 2, SAFE_TOP + 110, rise=0)
-    big = tight(d3.serif_layer(["700 no's."], 170, INK, weight=600))
+    big = tight(d3.serif_layer(["29 no's."], 190, INK, weight=600))
     place_box(fr, big, W / 2, top=SAFE_TOP + 200)
-    cols, rows, gap = d6.COLS, d6.ROWS, 26
+    cols, rows, gap = d6.COLS, d6.ROWS, 112
     x0 = (W - (cols - 1) * gap) / 2
     y0 = SAFE_TOP + 200 + big.height + 80
-    faded = d6.dot_sprite(8, (196, 186, 175))
-    gold = d6.dot_sprite(11, GOLD, glow=True)
+    faded = d6.dot_sprite(28, (196, 186, 175))
+    gold = d6.dot_sprite(34, GOLD, glow=True)
     for idx in range(cols * rows):
         if idx not in d6.CHOSEN:
             d6.paste_center(fr, faded, x0 + (idx % cols) * gap, y0 + (idx // cols) * gap)

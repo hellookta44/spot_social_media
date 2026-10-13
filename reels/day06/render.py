@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Render the SPOT "Day 6" Instagram Reel: what 700 no's look like.
+"""Render the SPOT "Day 6" Instagram Reel: what 29 no's look like.
 
 Usage:  python3 reels/day06/render.py
 Output: reels/day06/out/spot_day06_reel.mp4 (+ _no_music, music .wav, cover .jpg)
 
 Built from earlier footage (new crops / unused sections) plus a data motion
-graphic: 700 dots, one per rejected sample, then the 6 that made the shortlist.
+graphic: 35 dots, one per sample received, then the 6 that made the shortlist.
 """
 import importlib.util
 import math
@@ -33,7 +33,7 @@ place, appear = kit.place, kit.appear
 title, kicker, serif_layer = d3.title, d3.kicker, d3.serif_layer
 
 TAG = kit.make_tag("06")
-REJECTED, SHORTLIST = 700, 6
+RECEIVED, SHORTLIST = 35, 6
 
 
 def frames(day, name, start, dur, speed=1.0):
@@ -42,7 +42,7 @@ def frames(day, name, start, dur, speed=1.0):
 
 # --------------------------------------------------------------------------- scene 1: hook
 
-H1 = title(["What do", "700 no's look like?"], 100)
+H1 = title(["What do", "29 no's look like?"], 100)
 
 
 def s_hook(fr, t, T):
@@ -52,13 +52,13 @@ def s_hook(fr, t, T):
     place(fr, H1, W / 2, 500, appear(t, 0.2, 0.6), rise=30)
 
 
-# --------------------------------------------------------------------------- scene 2: 700 dots
+# --------------------------------------------------------------------------- scene 2: 35 dots
 
-COLS, ROWS = 25, 28
-GAP = 36
+COLS, ROWS = 7, 5
+GAP = 122
 GX0 = (W - (COLS - 1) * GAP) / 2
-GY0 = 640
-DOT_R = 11
+GY0 = 760
+DOT_R = 30
 FILL0, FILL1 = 0.5, 4.2          # dots appear between these times
 FADE0 = 5.0                      # rejected dots fade, 6 turn gold
 GATHER0, GATHER1 = 6.3, 7.4      # the 6 glide to the centre
@@ -92,13 +92,13 @@ def dot_sprite(r, color, alpha=255, glow=False):
 
 DOT = dot_sprite(DOT_R, (120, 108, 98))
 DOT_FADED = dot_sprite(DOT_R, (205, 196, 186))
-DOT_GOLD = dot_sprite(DOT_R + 4, GOLD, glow=True)
+DOT_GOLD = dot_sprite(DOT_R + 6, GOLD, glow=True)
 
 TAG_INK = kit.text_layer(["DAY 06"], kit.F_SEMIBOLD, 64, INK, tracking=10)
 TAG_INK_SUB = kit.text_layer(["BUILDING SPOT"], kit.F_MEDIUM, 28, INK, tracking=7)
-C_LABEL = kit.text_layer(["SAMPLES REJECTED  ·  ONE DOT = ONE SAMPLE"], kit.F_MEDIUM, 26, (120, 112, 104), tracking=4)
+C_LABEL = kit.text_layer(["SAMPLES RECEIVED  ·  ONE DOT = ONE SAMPLE"], kit.F_MEDIUM, 26, (120, 112, 104), tracking=4)
 C_SHORT = serif_layer([f"Only {SHORTLIST} made the shortlist."], 76, INK, weight=600)
-C_PCT = kit.text_layer(["That's less than 1%."], kit.F_MEDIUM, 40, GOLD)
+C_PCT = kit.text_layer(["That's about 1 in 6."], kit.F_MEDIUM, 40, GOLD)
 
 
 def dot_pos(idx):
@@ -119,8 +119,7 @@ def s_dots(t, T):
     # Counter (phase 1) → shortlist line (phase 2).
     if t < FADE0 + 0.2:
         n = sum(1 for idx in ORDER if APPEAR_AT[idx] <= t)
-        label = f"{n}+" if n >= REJECTED else str(n)
-        big = serif_layer([label], 190, INK, weight=600)
+        big = serif_layer([str(n)], 190, INK, weight=600)
         out = 1 - appear(t, FADE0 - 0.1, 0.3)
         place(fr, big, W / 2, 430, min(appear(t, 0.1, 0.3), out), rise=0)
         place(fr, C_LABEL, W / 2, 560, min(appear(t, 0.3), out), rise=0)
@@ -151,13 +150,13 @@ def s_dots(t, T):
         if t < a0:
             continue
         x, y = dot_pos(idx)
-        tx, ty = W / 2 + (j - (SHORTLIST - 1) / 2) * 110, GY0 + (ROWS * GAP) / 2
+        tx, ty = W / 2 + (j - (SHORTLIST - 1) / 2) * 150, GY0 + ((ROWS - 1) * GAP) / 2
         x, y = x + (tx - x) * gather, y + (ty - y) * gather
         if fade <= 0:
             paste_center(fr, DOT, x, y, 0.4 + 0.6 * min(1.0, (t - a0) / 0.12))
         else:
             g = kit.ease_out(fade)
-            paste_center(fr, DOT_GOLD, x, y, 0.6 + 0.4 * g + 0.6 * gather)
+            paste_center(fr, DOT_GOLD, x, y, 0.6 + 0.4 * g + 0.15 * gather)
     return fr
 
 

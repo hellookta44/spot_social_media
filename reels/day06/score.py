@@ -1,7 +1,7 @@
 """Original score + sound design for the SPOT Day 5 Reel (all synthesised).
 
-The 700-dot graphic drives the sound: a patter of soft ticks that speeds up as
-the dots land, an impact when the counter hits 700+, a downward "dim" as the
+The 35-dot graphic drives the sound: a soft tick as each dot lands (speeding up),
+an impact when the counter hits 35, a downward "dim" as the
 rejected dots fade, six bell notes as the shortlist turns gold, and a chord
 bloom as the six gather. Music follows in the Days 1–4 instrument family.
 """
@@ -48,9 +48,9 @@ def compose(starts, total, cues, path):
     tr.add(1.2, m.epiano(72, 2.2, 0.6), 0.08, verb=0.6)
     tr.add(s_dots - 0.4, m.whoosh(0.55), 0.09, verb=0.2)
 
-    # Dots: tick patter that thickens as they land (every 4th dot sounds), riser, impact on 700+.
+    # Dots: a tick per dot as they land, riser, impact on 35.
     times = cues["dot_times"]
-    for i, t in enumerate(times[::4]):
+    for i, t in enumerate(times):
         tr.add(s_dots + t, m.tick(88 + (i % 5) * 2), 0.05, pan=float(rng.uniform(-0.6, 0.6)), verb=0.15)
     fill_end = times[-1]
     tr.add(s_dots + 0.5, m.pad(CHORDS["Am"]["pad"], fill_end, attack=1.5), 0.16, verb=0.6)

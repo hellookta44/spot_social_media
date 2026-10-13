@@ -3,7 +3,7 @@
 Music: 96 BPM in F major (F – Am – Dm – Bb), a memorable 2-bar piano hook doubled
 by a soft bell, sidechain-pumped pad, sub bass, kick, finger snaps and shaker.
 Arrangement follows the edit: intro → groove under the checklist → hook melody
-on the testing shots → breakdown on the pipette → full drop on the 700 → 6
+on the testing shots → breakdown on the pipette → full drop on the 35 → 6
 countdown → resolve on the logo.
 
 SFX: pouch crinkle + hit on "Sample #17582", pen ticks on each check, a wrong-note
@@ -184,7 +184,7 @@ def compose(starts, total, cues, path):
     tr.add(s_pip + 0.6, s3.plip(), 0.12, verb=0.5)
     tr.add(s_count - 1.4, m.riser(1.4), 0.06, verb=0.4)
 
-    # 6. Countdown 700 → 6: full groove, falling ticks, impact on "only 6".
+    # 6. Countdown 35 → 6: full groove, falling ticks, impact on "only 6".
     c0, c1 = cues["count"]
     pads.add(s_count, m.pad(PROG[2]["pad"], c1 + 0.3, attack=0.3, bright=1.3), 0.26, verb=0.6)  # tension under the count
     tr.add(s_count, m.bass(PROG[2]["bass"], c1), 0.10)

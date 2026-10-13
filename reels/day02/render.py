@@ -186,9 +186,10 @@ def s_pipette(fr, t, T):
     place(fr, H5_I, W / 2, 590, appear(t, 0.9))
 
 
-# --------------------------------------------------------------------------- 6. 700 → 6
+# --------------------------------------------------------------------------- 6. 35 → 6
 
-S6_PRE = title(["From 700+ samples,"], 76)
+SAMPLES = 35
+S6_PRE = title([f"From {SAMPLES} samples,"], 76)
 S6_POST = kit.with_shadow(serif_layer(["made the shortlist."], 76, italic=True, weight=500), 14, 0.6)
 COUNT0, COUNT1 = 0.35, 2.15
 
@@ -199,7 +200,7 @@ def s_count(fr, t, T):
     place(fr, TAG, W / 2, 215, 1, rise=0)
     place(fr, S6_PRE, W / 2, 400, appear(t, 0.1))
     k = kit.ease_out((t - COUNT0) / (COUNT1 - COUNT0))
-    n = round(700 + (6 - 700) * k)
+    n = round(SAMPLES + (6 - SAMPLES) * k)
     big = kit.with_shadow(serif_layer([f"only {n}" if k >= 1 else str(n)], 230), 20, 0.6)
     pop = 1.0 + 0.07 * max(0.0, 1 - (t - COUNT1) / 0.25) if t > COUNT1 else 1.0
     place(fr, big, W / 2, 600, appear(t, 0.3, 0.3), rise=20, scale=pop)

@@ -2,7 +2,7 @@
 """Original background score for the SPOT Day 1 Reel, synthesised from scratch
 (no samples or third-party music).
 
-Cues follow the edit: ticks under the 700+ counter, a boom when it lands,
+Cues follow the edit: ticks under the 0 → 35 counter, a boom when it lands,
 a soft beat while we're on the road, a thud on every REJECTED stamp, drums drop
 out for the "your skin deserves" line, and a warm resolve on the logo.
 
@@ -214,7 +214,7 @@ def compose(starts, total, path):
     bar = (s5 - s2) / 4          # four bars from "on the road" to "your skin deserves"
     beat = bar / 4
 
-    # --- Scene 1: hook. Pad, ticks that slow down with the counter, boom when 700+ lands.
+    # --- Scene 1: hook. Pad, ticks that slow down with the counter, boom when 35 lands.
     tr.add(0.0, pad(CHORDS["Am"]["pad"], s2 + 0.3, attack=0.4), 0.30, verb=0.5)
     last = -1
     for i in range(int(1.85 * SR / 400)):
