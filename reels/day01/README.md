@@ -1,7 +1,18 @@
 # SPOT — Day 1 Reel: "700+ samples rejected"
 
-**Final video:** `out/spot_day01_reel.mp4` (1080×1920, 30 fps, 22s, silent track)
-**Cover:** `out/spot_day01_cover.jpg`
+| File | What it is |
+|---|---|
+| `out/spot_day01_reel.mp4` | Final reel with original background music (1080×1920, 30 fps, 22s) |
+| `out/spot_day01_reel_no_music.mp4` | Same reel, silent — use this if you'd rather add a trending sound in Instagram |
+| `out/spot_day01_music.wav` | The background score on its own |
+| `out/spot_day01_cover.jpg` | Cover image (the 700+ hook) |
+
+## Music
+
+`music.py` composes an original score in code (no samples, no third-party
+music), cut to the edit: ticks under the 700+ counter, an impact when it lands,
+a soft beat on the road, a thud on every REJECTED stamp, drums drop out for the
+"your skin deserves" line, and a warm resolve on the logo.
 
 ## Storyboard
 
@@ -39,7 +50,7 @@ Follow @shopspotbeauty so you don't miss Day 2. ✨
 
 ## Posting tips
 
-- Add a trending sound in the Instagram app (the video has no music on purpose).
+- Post `spot_day01_reel.mp4` as is, or post `spot_day01_reel_no_music.mp4` with a trending sound for extra reach.
 - Use `out/spot_day01_cover.jpg` as the cover so the grid shows the "700+" hook.
 - Post 7–9pm local time; pin a comment like "Guess how many samples we rejected on Day 2? 👀".
 

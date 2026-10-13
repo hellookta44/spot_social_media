@@ -17,14 +17,14 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__))
 FOOTAGE = os.path.join(HERE, "footage")
 OUT = os.path.join(HERE, "out")
+BRAND = os.path.join(HERE, "..", "..", "brand")
 
 W, H, FPS = 1080, 1920, 30
 XFADE = 0.25  # seconds of crossfade between scenes
+LAST_XFADE = 0.45  # slower fade into the end card
 
 FONT_DIR = "/usr/share/fonts/opentype/inter"
 F_DISPLAY_LIGHT = os.path.join(FONT_DIR, "InterDisplay-Light.otf")
-F_DISPLAY_XLIGHT = os.path.join(FONT_DIR, "InterDisplay-ExtraLight.otf")
-F_DISPLAY_THIN = os.path.join(FONT_DIR, "InterDisplay-Thin.otf")
 F_MEDIUM = os.path.join(FONT_DIR, "Inter-Medium.otf")
 F_SEMIBOLD = os.path.join(FONT_DIR, "Inter-SemiBold.otf")
 
@@ -110,47 +110,6 @@ def place(frame, layer, cx, cy, progress=1.0, rise=40, scale=1.0):
         lay.putalpha(a)
     y = cy - lay.height / 2 + rise * (1 - progress)
     frame.alpha_composite(lay, (int(cx - lay.width / 2), int(y)))
-
-
-def make_logo(height, color=INK):
-    """Vector re-draw of the SPOT. wordmark (thin S P T, double-ring O, dot)."""
-    s = 4  # supersample
-    hh = height * s
-    f = font(F_DISPLAY_XLIGHT, int(hh * 1.36))
-    stroke = max(2, int(hh * 0.045))
-    gap = int(hh * 0.22)
-    o_w = int(hh * 0.78)
-    letters = ["S", "P", "O", "T", "."]
-    widths = []
-    for c in letters:
-        if c == "O":
-            widths.append(o_w)
-        elif c == ".":
-            widths.append(int(hh * 0.16))
-        else:
-            bb = f.getbbox(c)
-            widths.append(bb[2] - bb[0])
-    total = sum(widths) + gap * 4 + int(hh * 0.06)
-    img = Image.new("RGBA", (total + 4 * s, hh + 4 * s), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    x = 2 * s
-    for c, w in zip(letters, widths):
-        if c == "O":
-            d.ellipse([x, 0, x + w, hh], outline=color, width=stroke)
-            ins = int(hh * 0.075)
-            d.ellipse([x + ins, ins, x + w - ins, hh - ins], outline=color, width=stroke)
-            x += w + gap
-        elif c == ".":
-            r = int(hh * 0.07)
-            d.ellipse([x, hh - 2 * r, x + 2 * r, hh], fill=color)
-        else:
-            bb = f.getbbox(c)
-            d.text((x - bb[0], -bb[1]), c, font=f, fill=color)
-            # scale glyph height to cap height == hh
-            x += w + gap
-    # glyph cap height may differ slightly from hh; crop to content
-    img = img.crop(img.getbbox())
-    return img.resize((max(1, img.width // s), max(1, img.height // s)), Image.LANCZOS)
 
 
 def stamp(text="REJECTED", size=72, color=STAMP_RED, angle=-12):
@@ -315,7 +274,13 @@ def s5_overlay(fr, t, T):
 
 
 # Scene 6 — end card (cream, logo)
-LOGO = make_logo(150)
+def load_logo(width):
+    """Official SPOT. wordmark (brand/spot_logo_dark.png), scaled to `width`."""
+    img = Image.open(os.path.join(BRAND, "spot_logo_dark.png")).convert("RGBA")
+    return img.resize((width, round(img.height * width / img.width)), Image.LANCZOS)
+
+
+LOGO = load_logo(640)
 E_LINE1 = text_layer(["Serums & a face cleanser."], F_DISPLAY_LIGHT, 50, INK)
 E_LINE2 = text_layer(["COMING SOON"], F_MEDIUM, 30, (120, 112, 104), tracking=8)
 E_FOLLOW = text_layer(["Follow the journey from Day 1"], F_DISPLAY_LIGHT, 40, INK)
@@ -379,43 +344,63 @@ def render_scene(i, sc, path, cover_path=None):
     return T
 
 
+def scene_timing():
+    """Scene start times (with crossfades) and total reel length."""
+    durs = [sc.get("dur") or sum(s[2] for s in sc["shots"]) for sc in SCENES]
+    starts, offset = [0.0], 0.0
+    for i in range(1, len(durs)):
+        xf = LAST_XFADE if i == len(durs) - 1 else XFADE
+        offset += durs[i - 1] - xf
+        starts.append(offset)
+    return starts, offset + durs[-1]
+
+
 def main():
+    import music
+
     os.makedirs(OUT, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="spot_day01_")
-    parts, durs = [], []
+    parts = []
     for i, sc in enumerate(SCENES):
         p = os.path.join(tmp, f"scene{i}.mp4")
         cover = os.path.join(OUT, "spot_day01_cover.jpg") if i == 0 else None
-        durs.append(render_scene(i, sc, p, cover))
+        d = render_scene(i, sc, p, cover)
         parts.append(p)
-        print(f"scene {i + 1}/{len(SCENES)} rendered ({durs[-1]:.1f}s)")
+        print(f"scene {i + 1}/{len(SCENES)} rendered ({d:.1f}s)")
 
-    # Chain crossfades between scenes, add a silent stereo track (add music in Instagram).
+    starts, total = scene_timing()
+    score = music.compose(starts, total, os.path.join(OUT, "spot_day01_music.wav"))
+    print(f"wrote {score}")
+
+    # Chain crossfades between scenes.
     inputs = []
     for p in parts:
         inputs += ["-i", p]
-    chain, last, offset = [], "[0:v]", 0.0
+    chain, last = [], "[0:v]"
     for i in range(1, len(parts)):
-        offset += durs[i - 1] - XFADE
-        xf = 0.45 if i == len(parts) - 1 else XFADE
-        if xf != XFADE:
-            offset -= xf - XFADE
+        xf = LAST_XFADE if i == len(parts) - 1 else XFADE
         out = f"[v{i}]"
-        chain.append(f"{last}[{i}:v]xfade=transition=fade:duration={xf}:offset={offset:.3f}{out}")
+        chain.append(f"{last}[{i}:v]xfade=transition=fade:duration={xf}:offset={starts[i]:.3f}{out}")
         last = out
-    total = offset + durs[-1]
-    final = os.path.join(OUT, "spot_day01_reel.mp4")
+    video = os.path.join(tmp, "video.mp4")
     subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", *inputs,
-         "-f", "lavfi", "-t", f"{total:.3f}", "-i", "anullsrc=r=48000:cl=stereo",
-         "-filter_complex", ";".join(chain),
-         "-map", last, "-map", f"{len(parts)}:a",
-         "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
-         "-profile:v", "high", "-r", str(FPS), "-c:a", "aac", "-b:a", "128k",
-         "-movflags", "+faststart", "-shortest", final],
+        ["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(chain),
+         "-map", last, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
+         "-profile:v", "high", "-r", str(FPS), video],
         check=True)
+
+    # With the original score, and a silent version for adding a trending sound in Instagram.
+    for name, audio in [("spot_day01_reel.mp4", ["-i", score]),
+                        ("spot_day01_reel_no_music.mp4",
+                         ["-f", "lavfi", "-t", f"{total:.3f}", "-i", "anullsrc=r=48000:cl=stereo"])]:
+        final = os.path.join(OUT, name)
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", video, *audio, "-map", "0:v", "-map", "1:a",
+             "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",
+             "-shortest", final],
+            check=True)
+        print(f"wrote {final} ({total:.1f}s)")
     shutil.rmtree(tmp)
-    print(f"wrote {final} ({total:.1f}s)")
 
 
 if __name__ == "__main__":
