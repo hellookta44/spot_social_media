@@ -196,7 +196,7 @@ def s_line(fr, t, T):
 
 # --------------------------------------------------------------------------- end card
 
-E_NEXT = serif_layer(["Day 7: a day building SPOT."], 58, INK, weight=500, italic=True)
+E_NEXT = serif_layer(["Day 7: inside Beauty Asia."], 58, INK, weight=500, italic=True)
 
 
 def s_end(t, T):

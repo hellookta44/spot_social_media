@@ -118,8 +118,16 @@ def cover_day05():
 
 
 def cover_day07():
-    bg = cinematic(grab("day07", "2300_night.mp4", 1.5), zoom=1.05)
-    return compose(bg, "07", ["6am", "to midnight."], "a day building SPOT.", big_size=170)
+    bg = cinematic(d3_still("day07", "walking_hall.jpg"), zoom=1.18, focus=(0.5, 1.0))
+    return compose(bg, "07", ["Beauty", "Asia."], "a day at the expo.", big_size=200)
+
+
+def d3_still(day, name):
+    img = Image.open(os.path.join(HERE, day, "footage", name)).convert("RGB")
+    s = max(W / img.width, H / img.height)
+    img = img.resize((round(img.width * s), round(img.height * s)), Image.LANCZOS)
+    x0, y0 = (img.width - W) // 2, (img.height - H) // 2
+    return img.crop((x0, y0, x0 + W, y0 + H))
 
 
 def cover_day06():
@@ -149,9 +157,6 @@ COVERS = {"01": cover_day01, "02": cover_day02, "03": cover_day03, "04": cover_d
 
 def main():
     for day, fn in COVERS.items():
-        if day == "07" and not os.path.exists(os.path.join(HERE, "day07", "footage", "2300_night.mp4")):
-            print("skip day07 cover: run reels/day07/fetch_pexels.py first")
-            continue
         out = os.path.join(HERE, f"day{day}", "out", f"spot_day{day}_cover.jpg")
         fn().save(out, quality=94)
         print("wrote", out)

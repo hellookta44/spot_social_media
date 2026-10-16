@@ -4,8 +4,8 @@
 Needs: network access to api.pexels.com + videos.pexels.com, and a Pexels API key
 in the PEXELS_API_KEY environment variable (never commit the key).
 
-Usage:  python3 reels/day07/fetch_pexels.py
-Writes: reels/day07/footage/<slot>.mp4 and footage/credits.json (video URL + creator).
+Usage:  python3 reels/backlog/day_in_the_life/fetch_pexels.py
+Writes: reels/backlog/day_in_the_life/footage/<slot>.mp4 and footage/credits.json (video URL + creator).
 """
 import json
 import os

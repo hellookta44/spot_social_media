@@ -17,7 +17,7 @@ No new footage: earlier clips (new crops / unused sections) plus a data motion g
 | 3–12s | Motion graphic: 35 dots land one by one (one dot = one sample received), counter to 35; then 29 fade and 6 turn gold and glide into a row | **0 → 35** samples received → **Only 6 made the shortlist.** That's about 1 in 6. | A tick per dot, impact on 35, downward "dim", six bell notes, chord bloom |
 | 12–15s | Shortlist photo (label blurred) | **Those 6 are still being tested.** Not every one will make it. | Groove, glass clink |
 | 15–18s | Pink pipette macro (unused section) | **Saying no is how we'll earn your yes.** | Drop plip |
-| 18–22.5s | SPOT. end card | *Day 7: a day building SPOT.* | Resolve + bell |
+| 18–22.5s | SPOT. end card | *Day 7: inside Beauty Asia.* | Resolve + bell |
 
 ## Instagram caption
 
@@ -32,7 +32,7 @@ Every dot is one sample we received and tested.
 And those 6 are still being tested.
 Saying no is how we'll earn your yes.
 
-Tomorrow: a day building SPOT, 6am to midnight.
+Tomorrow: inside Beauty Asia.
 Follow @shopspotbeauty for Day 7 ✨
 
 #SPOTbeauty #Day6 #BuildingABrand #SkincareBrand #SkincareJourney

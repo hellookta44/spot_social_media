@@ -1,10 +1,9 @@
-"""Original score + sound design for the SPOT Day 7 Reel (all synthesised).
+"""Original score + sound design for the SPOT Day 7 Reel: inside Beauty Asia (all synthesised).
 
-A day from 6am to midnight: same production as Days 2/5 (sidechain pad, sub, kick,
-snaps, shaker, piano hook + bell), progression G – D – Em – C, with a soft
-clock-tick pulse on every eighth note. Each hour gets its own sound: alarm chime,
-coffee pour, keyboard typing, phone buzz, lab glass clink, pen scratch, passing
-car; the drums drop out for the night and resolve on the logo.
+Same production as Days 2/5 (sidechain pad, sub, kick, snaps, shaker, piano hook
++ bell), brighter in A major: A – F#m – D – E. SFX: crowd murmur and footsteps in
+the halls, a scanner beep + sweep on the skin analyzer, pen scratches on the notes,
+a bell per lesson, a paper-bag rustle on the last walk, shimmer on the logo.
 """
 import importlib.util
 import os
@@ -18,122 +17,102 @@ s2 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(s2)
 s3, m = s2.s3, s2.m
 SR = m.SR
-rng = np.random.default_rng(707)
+rng = np.random.default_rng(77)
 
 s2.PROG[:] = [
-    dict(bass=43, pad=[55, 59, 62, 67]),   # G
-    dict(bass=38, pad=[54, 57, 62, 66]),   # D
-    dict(bass=40, pad=[52, 55, 59, 64]),   # Em
-    dict(bass=48, pad=[52, 55, 60, 64]),   # C
+    dict(bass=45, pad=[57, 61, 64, 69]),   # A
+    dict(bass=42, pad=[54, 57, 61, 66]),   # F#m
+    dict(bass=50, pad=[54, 57, 62, 66]),   # D
+    dict(bass=52, pad=[56, 59, 64, 68]),   # E
 ]
-HOOK = [71, None, 74, None, 76, 74, 71, None,   69, None, 71, None, 67, None, None, None]
-s2.HOOK_B = [71, None, 74, None, 79, 76, 74, None,  76, None, 74, 71, 72, None, None, None]
+HOOK = [73, None, 76, None, 78, 76, 73, None,   71, None, 73, None, 69, None, None, None]
+s2.HOOK_B = [73, None, 76, None, 81, 78, 76, None,  78, None, 76, 73, 74, None, None, None]
 
 
 def _t(dur):
     return np.arange(int(dur * SR)) / SR
 
 
-def clock_tick(high=True):
-    t = _t(0.05)
-    f = 3400 if high else 2600
-    return np.sin(2 * np.pi * f * t) * np.exp(-t / 0.004) + 0.3 * m.highpass(rng.standard_normal(len(t)), 5000) * np.exp(-t / 0.003)
-
-
-def alarm_chime():
-    out = np.zeros(int(1.6 * SR))
-    for k, n in enumerate([79, 83, 86, 91]):
-        b = m.bell(n, 1.2)
-        i = int(k * 0.11 * SR)
-        out[i:i + len(b)] += b[: len(out) - i] * 0.8
-    return out
-
-
-def pour(dur=1.6):
+def crowd(dur):
+    """Soft hall murmur: band-limited noise with syllable-rate movement."""
     t = _t(dur)
-    x = m.spectral(rng.standard_normal(len(t)), lambda f: np.exp(-((np.log(np.maximum(f, 1) / 900)) ** 2) / 0.6))
-    gurgle = 1 + 0.6 * np.sin(2 * np.pi * (9 + 5 * t) * t)
-    return x * gurgle * np.minimum(1, t / 0.1) * np.clip((dur - t) / 0.3, 0, 1)
+    x = m.spectral(rng.standard_normal(len(t)), lambda f: np.exp(-((np.log(np.maximum(f, 1) / 600)) ** 2) / 0.7))
+    mod = 0.7 + 0.3 * np.abs(m.lowpass(rng.standard_normal(len(t)), 6))
+    mod /= mod.max()
+    return x * mod * np.minimum(1, t / 0.5) * np.clip((dur - t) / 0.5, 0, 1)
 
 
-def typing(dur=2.0):
+def footsteps(dur, rate=1.8):
     out = np.zeros(int(dur * SR))
-    t = 0.0
-    while t < dur - 0.05:
-        k = _t(0.03)
-        click = m.spectral(rng.standard_normal(len(k)), lambda f: np.exp(-((np.log(np.maximum(f, 1) / 2800)) ** 2) / 0.3))
+    t = 0.1
+    while t < dur - 0.2:
+        k = _t(0.12)
+        step = m.lowpass(rng.standard_normal(len(k)), 700) * np.exp(-k / 0.025)
+        step += 0.3 * np.sin(2 * np.pi * 90 * k) * np.exp(-k / 0.03)
         i = int(t * SR)
-        out[i:i + len(k)] += click * np.exp(-k / 0.005) * rng.uniform(0.5, 1.0)
-        t += rng.uniform(0.06, 0.16)
+        out[i:i + len(k)] += step
+        t += 1 / rate
     return out
 
 
-def phone_buzz():
-    t = _t(0.9)
-    gate = ((t % 0.45) < 0.3).astype(float)
-    return np.sin(2 * np.pi * 150 * t) * (0.6 + 0.4 * np.sin(2 * np.pi * 30 * t)) * gate * np.minimum(1, t / 0.02)
+def scanner():
+    t = _t(1.6)
+    beep = np.sin(2 * np.pi * 1760 * t) * (t < 0.09) + np.sin(2 * np.pi * 2350 * t) * ((t > 0.14) & (t < 0.22))
+    sweep = np.sin(2 * np.pi * np.cumsum(400 + 900 * np.clip((t - 0.3) / 1.0, 0, 1)) / SR) * \
+        np.sin(np.pi * np.clip((t - 0.3) / 1.2, 0, 1)) * 0.35
+    return beep * 0.6 + sweep
 
 
-def pen_scratch(dur=1.2):
+def bag_rustle(dur=1.0):
     t = _t(dur)
-    x = m.spectral(rng.standard_normal(len(t)), lambda f: np.exp(-((np.log(np.maximum(f, 1) / 3500)) ** 2) / 0.5))
-    strokes = np.clip(np.sin(2 * np.pi * 3.2 * t), 0, 1) ** 2
-    return x * strokes * np.clip((dur - t) / 0.2, 0, 1)
-
-
-def car_pass(dur=1.8):
-    t = _t(dur)
-    x = m.lowpass(rng.standard_normal(len(t)), 900)
-    return x * np.exp(-((t - dur / 2) / (dur / 4)) ** 2)
+    x = m.spectral(rng.standard_normal(len(t)), lambda f: np.exp(-((np.log(np.maximum(f, 1) / 2500)) ** 2) / 0.8))
+    return x * np.abs(m.lowpass(rng.standard_normal(len(t)), 12)) * 3 * np.clip((dur - t) / 0.3, 0, 1)
 
 
 def compose(starts, total, cues, path):
-    *hours, s_end = starts
+    s_arrive, s_walk, s_booth, s_scan, s_notes, s_less, s_walk2, s_end = starts
     tr = m.Track(total + 0.5)
     pads = m.Track(total + 0.5)
     kicks = []
-    BAR = s2.BAR
 
-    # 6:00 — alarm chime, soft pad, ticking clock begins.
-    pads.add(0.0, m.pad(s2.PROG[0]["pad"], hours[1] + 0.3, attack=0.4, bright=0.9), 0.24, verb=0.6)
-    tr.add(0.15, alarm_chime(), 0.10, pan=0.2, verb=0.6)
-    # Clock pulse under the whole day (until midnight).
-    t = 0.0
-    k = 0
-    while t < s_end - 0.2:
-        tr.add(t, clock_tick(k % 2 == 0), 0.045 if k % 2 == 0 else 0.03, pan=0.3, verb=0.1)
-        t += s2.BEAT / 2
-        k += 1
+    # Arrival: pad + shimmer, crowd fades in, riser into the beat.
+    pads.add(0.0, m.pad(s2.PROG[0]["pad"], s_walk + 0.3, attack=0.4, bright=1.0), 0.24, verb=0.6)
+    tr.add(0.2, s3.shimmer([81, 85, 88, 93]), 0.05, pan=0.2, verb=0.7)
+    tr.add(0.0, crowd(s_less + 0.5), 0.05, verb=0.3)
+    tr.add(s_walk - 1.0, m.riser(1.0), 0.04, verb=0.4)
 
-    # 7:30 → 7:00 PM — full groove with the hook from 9:00.
-    kicks += s2.groove(tr, pads, hours[1], hours[2], hook=None)
-    kicks += s2.groove(tr, pads, hours[2], hours[7], hook=HOOK)
+    # Halls → booth → scanner → notes: full groove, hook from the booth on.
+    kicks += s2.groove(tr, pads, s_walk, s_booth, hook=None)
+    kicks += s2.groove(tr, pads, s_booth, s_less, hook=HOOK)
+    for t in (s_walk, s_booth, s_scan, s_notes):
+        tr.add(t - 0.3, m.whoosh(0.45), 0.05, verb=0.2)
+    tr.add(s_walk, footsteps(s_booth - s_walk), 0.10, pan=-0.1)
+    tr.add(s_scan + 0.15, scanner(), 0.10, pan=0.15, verb=0.3)
+    tr.add(s_notes + 0.5, s2.pen_tick(), 0.12, verb=0.2)
+    tr.add(s_notes + 1.0, s3.rub_swish(1.4, rate=3.0), 0.04, verb=0.2)
 
-    # Hour sounds + a whoosh and a quick clock "whirr" on every cut.
-    for i, h in enumerate(hours[1:], start=1):
-        tr.add(h - 0.3, m.whoosh(0.45), 0.05, verb=0.2)
-        for j in range(5):
-            tr.add(h + j * 0.09, clock_tick(True), 0.05, pan=-0.2, verb=0.15)
-    tr.add(hours[1] + 0.3, pour(), 0.12, pan=-0.15, verb=0.2)
-    tr.add(hours[2] + 0.2, typing(2.0), 0.10, pan=0.2, verb=0.15)
-    tr.add(hours[3] + 0.3, phone_buzz(), 0.12, verb=0.15)
-    tr.add(hours[4] + 0.6, s3.glass_clink(1.0), 0.06, pan=-0.2, verb=0.5)
-    tr.add(hours[4] + 1.0, s3.plip(), 0.10, verb=0.4)
-    tr.add(hours[5] + 0.3, pen_scratch(), 0.08, pan=0.2, verb=0.2)
-    tr.add(hours[6] + 0.2, car_pass(), 0.20, pan=0.0, verb=0.3)
+    # Lessons: drums out, pad + a bell per lesson.
+    tr.add(s_less - 0.3, m.whoosh(0.45), 0.06, verb=0.3)
+    s2.groove(tr, pads, s_less, s_walk2, drums=False, snaps=False, shake=False, hook=None, keys=False)
+    for i, d in enumerate(cues["lessons"]):
+        tr.add(s_less + d, m.bell(81 + 2 * i, 2.4), 0.08, verb=0.6)
+        tr.add(s_less + d, m.epiano(69 + 4 * i, 1.6, 0.7), 0.08, verb=0.5)
 
-    # 11 PM → midnight: drums out, hook on piano alone, then a hush before the logo.
-    s2.groove(tr, pads, hours[7], s_end, drums=False, snaps=False, shake=False, hook=HOOK, keys=False)
-    tr.add(hours[8] + 0.3, m.bell(91, 2.6), 0.06, verb=0.8)
+    # Last walk: groove back with hook, footsteps + bag rustle.
+    tr.add(s_walk2 - 0.4, m.riser(0.4), 0.03, verb=0.4)
+    tr.add(s_walk2, m.boom(1.4, 46), 0.22, verb=0.35)
+    kicks += s2.groove(tr, pads, s_walk2, s_end, hook=HOOK)
+    tr.add(s_walk2, footsteps(s_end - s_walk2), 0.09, pan=0.1)
+    tr.add(s_walk2 + 0.4, bag_rustle(), 0.06, pan=-0.2, verb=0.2)
     tr.add(s_end - 0.5, m.whoosh(0.7), 0.08, verb=0.4)
 
-    # End card: Gmaj9 resolve + shimmer.
+    # End card: Amaj9 resolve + shimmer.
     tail = total - s_end
-    pads.add(s_end, m.pad([55, 59, 62, 66, 69], tail - 0.6, attack=0.5, release=1.0, bright=1.3), 0.30, verb=0.7)
-    tr.add(s_end, s2.sub(43, tail), 0.14)
-    for j, n in enumerate([67, 71, 74, 78, 81]):
+    pads.add(s_end, m.pad([57, 61, 64, 68, 71], tail - 0.6, attack=0.5, release=1.0, bright=1.3), 0.30, verb=0.7)
+    tr.add(s_end, s2.sub(45, tail), 0.14)
+    for j, n in enumerate([69, 73, 76, 80, 83]):
         tr.add(s_end + 0.12 + j * 0.13, m.epiano(n, 2.8, 0.75), 0.09, pan=-0.3 + 0.15 * j, verb=0.7)
-    tr.add(s_end + 0.1, s3.shimmer([86, 90, 93, 98]), 0.05, verb=0.8)
+    tr.add(s_end + 0.1, s3.shimmer([88, 92, 95, 100]), 0.05, verb=0.8)
 
     # Mix (same chain as Days 2 and 5).
     n_all = tr.dry.shape[1]

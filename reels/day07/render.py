@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-"""Render the SPOT "Day 7" Instagram Reel: a day building SPOT, 6am to midnight.
+"""Render the SPOT "Day 7" Instagram Reel: inside Beauty Asia (expo visit).
 
-Usage:  python3 reels/day07/fetch_pexels.py   # once: downloads the stock clips
-        python3 reels/day07/render.py
+Usage:  python3 reels/day07/render.py
 Output: reels/day07/out/spot_day07_reel.mp4 (+ _no_music, music .wav)
         Cover: python3 reels/covers.py
 
-All footage is new Pexels stock (free licence; credits in footage/credits.json).
-A gold analog clock + serif time stamp ticks forward at every cut.
+Founder footage + photos from the expo, in the series look (Cormorant headlines,
+gold numerals, cream lesson card, DAY tag, end card).
 """
 import importlib.util
-import math
 import os
 import shutil
 import subprocess
 import tempfile
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageEnhance
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REELS = os.path.join(HERE, "..")
@@ -30,86 +28,84 @@ OUT = os.path.join(HERE, "out")
 W, H, FPS = kit.W, kit.H, kit.FPS
 XFADE, LAST_XFADE = d3.XFADE, d3.LAST_XFADE
 INK, CREAM, WHITE = kit.INK, kit.CREAM, kit.WHITE
-GOLD = (196, 160, 104)
+GOLD = (176, 141, 87)
 place, appear = kit.place, kit.appear
-serif_layer = d3.serif_layer
+title, kicker, serif_layer = d3.title, d3.kicker, d3.serif_layer
 
 TAG = kit.make_tag("07")
-
-# (slot file, clock minutes since midnight, time label, line, clip start, duration)
-HOURS = [
-    ("0600_sunrise", 6 * 60, ("6:00", "AM"), "The day starts before the city does.", 0.5, 3.0),
-    ("0730_coffee", 7 * 60 + 30, ("7:30", "AM"), "Coffee first. Then the list.", 0.5, 2.4),
-    ("0900_laptop", 9 * 60, ("9:00", "AM"), "Emails to manufacturers.", 0.5, 2.4),
-    ("1100_call", 11 * 60, ("11:00", "AM"), "A call with our chemist.", 0.5, 2.4),
-    ("1300_lab", 13 * 60, ("1:00", "PM"), "Back to the formulas.", 0.5, 2.6),
-    ("1600_notes", 16 * 60, ("4:00", "PM"), "Notes. Decisions. More notes.", 0.5, 2.4),
-    ("1900_drive", 19 * 60, ("7:00", "PM"), "On the road again.", 0.5, 2.4),
-    ("2300_night", 23 * 60, ("11:00", "PM"), "Still at it.", 0.5, 2.6),
-    ("0000_city", 24 * 60, ("12:00", "AM"), "Tomorrow, we go again.", 0.5, 2.8),
-]
-HAND_SWEEP = 0.55  # seconds for the clock hands to sweep to the new time at each cut
+TAG_INK = kit.text_layer(["DAY 07"], kit.F_SEMIBOLD, 64, INK, tracking=10)
+TAG_INK_SUB = kit.text_layer(["BUILDING SPOT"], kit.F_MEDIUM, 28, INK, tracking=7)
 
 
-def frames(name, start, dur):
-    return d3.footage_frames(f"{name}.mp4", start, dur, 1.0, None, footage_dir=FOOTAGE)
+def frames(name, start, dur, speed=1.0):
+    return d3.footage_frames(name, start, dur, speed, None, footage_dir=FOOTAGE)
 
 
-# --------------------------------------------------------------------------- clock + time stamp
-
-def clock(minutes, size=150):
-    """Gold analog clock face (supersampled); hour and minute hands at `minutes`."""
-    s = 4
-    S = size * s
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    c = S / 2
-    d.ellipse([3 * s, 3 * s, S - 3 * s, S - 3 * s], outline=GOLD + (255,), width=4 * s)
-    for k in range(12):  # hour ticks
-        a = math.radians(k * 30)
-        r0, r1 = c * (0.80 if k % 3 else 0.70), c * 0.88
-        d.line([(c + r0 * math.sin(a), c - r0 * math.cos(a)), (c + r1 * math.sin(a), c - r1 * math.cos(a))],
-               fill=GOLD + (255,), width=(3 if k % 3 else 5) * s)
-    ha = math.radians((minutes / 60.0) % 12 * 30)
-    ma = math.radians((minutes % 60) * 6)
-    d.line([(c, c), (c + c * 0.45 * math.sin(ha), c - c * 0.45 * math.cos(ha))], fill=WHITE + (255,), width=7 * s)
-    d.line([(c, c), (c + c * 0.68 * math.sin(ma), c - c * 0.68 * math.cos(ma))], fill=WHITE + (255,), width=4 * s)
-    d.ellipse([c - 7 * s, c - 7 * s, c + 7 * s, c + 7 * s], fill=GOLD + (255,))
-    return kit.with_shadow(img.resize((size, size), Image.LANCZOS), 12, 0.6)
+def still(name):
+    img = Image.open(os.path.join(FOOTAGE, name)).convert("RGB")
+    s = max(W / img.width, H / img.height)
+    img = img.resize((round(img.width * s), round(img.height * s)), Image.LANCZOS)
+    x0, y0 = (img.width - W) // 2, (img.height - H) // 2
+    img = img.crop((x0, y0, x0 + W, y0 + H))
+    return ImageEnhance.Color(ImageEnhance.Contrast(img).enhance(1.06)).enhance(0.95)
 
 
-def stamp(label):
-    """'6:00' in big serif + 'AM' in spaced caps, side by side."""
-    t = serif_layer([label[0]], 150, WHITE, weight=600)
-    ap = kit.text_layer([label[1]], kit.F_SEMIBOLD, 40, GOLD, tracking=6)
-    img = Image.new("RGBA", (t.width + 18 + ap.width, t.height), (0, 0, 0, 0))
-    img.alpha_composite(t, (0, 0))
-    img.alpha_composite(ap, (t.width + 18, int(t.height * 0.42)))
-    return kit.with_shadow(img, 16, 0.6)
-
-
-STAMPS = [stamp(h[2]) for h in HOURS]
-LINES = [kit.with_shadow(serif_layer([h[3]], 66, WHITE, weight=500, italic=True), 14, 0.6) for h in HOURS]
-
-
-def make_overlay(i):
-    prev_min = HOURS[i - 1][1] if i else HOURS[0][1] - 60
+def headline_scene(lines, size=96, k_lines=None, y=500, double_grad=True):
+    h = title(lines, size)
+    k = kicker(k_lines, 42) if k_lines else None
 
     def overlay(fr, t, T):
         fr.alpha_composite(kit.TOP_GRAD)
-        fr.alpha_composite(kit.TOP_GRAD)
-        place(fr, TAG, W / 2, 215, 1 if i else appear(t, 0.0, 0.35), rise=0)
-        k = kit.ease_in_out(t / HAND_SWEEP)
-        minutes = prev_min + (HOURS[i][1] - prev_min) * k
-        cl = clock(minutes)
-        st = STAMPS[i]
-        row_w = cl.width + 10 + st.width
-        x0 = (W - row_w) / 2
-        p = 1 if i else appear(t, 0.2, 0.4)
-        place(fr, cl, x0 + cl.width / 2, 470, p, rise=0)
-        place(fr, st, x0 + cl.width + 10 + st.width / 2, 470, appear(t, 0.05, 0.3), rise=14)
-        place(fr, LINES[i], W / 2, 640, appear(t, 0.35, 0.4), rise=18)
+        if double_grad:
+            fr.alpha_composite(kit.TOP_GRAD)
+        place(fr, TAG, W / 2, 215, 1, rise=0)
+        place(fr, h, W / 2, y, appear(t, 0.15))
+        if k:
+            place(fr, k, W / 2, y + h.height / 2 + 60, appear(t, 0.9))
     return overlay
+
+
+# --------------------------------------------------------------------------- 1. hook: arrival
+
+H1 = title(["We went to", "Beauty Asia."], 112)
+H1_K = kicker(["To learn from the whole industry."], 42)
+
+
+def s_arrive(fr, t, T):
+    fr.alpha_composite(kit.TOP_GRAD)
+    fr.alpha_composite(kit.TOP_GRAD)
+    place(fr, TAG, W / 2, 215, appear(t, 0.0, 0.35), rise=0)
+    place(fr, H1, W / 2, 500, appear(t, 0.2, 0.6), rise=30)
+    place(fr, d3.RULE, W / 2, 640, appear(t, 0.8), rise=0)
+    place(fr, H1_K, W / 2, 710, appear(t, 1.0))
+
+
+# --------------------------------------------------------------------------- lessons card
+
+LESSONS = [
+    ("01", ["Everyone sells.", "Few explain."]),
+    ("02", ["People ask what's", "inside, not just the price."]),
+    ("03", ["Simple, honest", "formulas stand out."]),
+]
+L_TITLE = serif_layer(["What Beauty Asia", "taught us"], 84, INK, weight=600)
+L_NUMS = [serif_layer([n], 100, GOLD, weight=500, italic=True) for n, _ in LESSONS]
+L_TEXT = [serif_layer(lines, 60, INK, weight=500, line_gap=1.12, align="left") for _, lines in LESSONS]
+L_T0, L_STEP = 0.7, 0.85
+L_RULE = Image.new("RGBA", (120, 2), GOLD + (255,))
+
+
+def s_lessons(t, T):
+    fr = Image.new("RGBA", (W, H), CREAM + (255,))
+    place(fr, TAG_INK, W / 2, 196, 1, rise=0)
+    place(fr, TAG_INK_SUB, W / 2, 254, 1, rise=0)
+    place(fr, L_TITLE, W / 2, 470, appear(t, 0.05))
+    place(fr, L_RULE, W / 2, 590, appear(t, 0.4), rise=0)
+    for i, (num, txt) in enumerate(zip(L_NUMS, L_TEXT)):
+        p = appear(t, L_T0 + i * L_STEP, 0.5)
+        y = 760 + i * 240
+        place(fr, num, 200, y, p, rise=24)
+        place(fr, txt, 300 + txt.width / 2, y + 8, p, rise=24)
+    return fr
 
 
 # --------------------------------------------------------------------------- end card
@@ -131,13 +127,35 @@ def s_end(t, T):
 
 # --------------------------------------------------------------------------- timeline
 
-SCENES = [dict(slot=h[0], start=h[4], dur=h[5], overlay=make_overlay(i), zoom=(1.0, 1.06))
-          for i, h in enumerate(HOURS)] + [dict(card=s_end, dur=4.2)]
-CUES = dict(hand_sweep=HAND_SWEEP)
+WALK = still("walking_hall.jpg")
+BOOTH = still("ingredient_booth.jpg")
+NOTES = still("taking_notes.jpg")
+WALK2 = still("walking_hall_2.jpg")
+
+SCENES = [
+    dict(clip=("expo_arrival.mp4", 0.3, 3.2, 0.85), overlay=s_arrive, zoom=(1.0, 1.06)),
+    dict(still=WALK, dur=3.0, overlay=headline_scene(["Hall after hall.", "Brand after brand."], 92),
+         zoom=(1.0, 1.08), focus=(0.5, 0.6)),
+    dict(still=BOOTH, dur=3.2, overlay=headline_scene(["We met ingredient", "suppliers."], 92,
+                                                      ["Where does every raw material come from?"]),
+         zoom=(1.0, 1.07), focus=(0.4, 0.5)),
+    dict(clip=("skin_analyzer.mp4", 0.0, 2.4, 0.5), overlay=headline_scene(["Saw the newest", "skin tech."], 96),
+         zoom=(1.0, 1.05)),
+    dict(still=NOTES, dur=3.2, overlay=headline_scene(["Asked questions.", "Took notes."], 96,
+                                                      ["Lots of notes."]),
+         zoom=(1.0, 1.07), focus=(0.6, 0.45)),
+    dict(card=s_lessons, dur=4.4),
+    dict(still=WALK2, dur=3.0, overlay=headline_scene(["Came home with ideas."], 92,
+                                                      ["(and a few bags)"]),
+         zoom=(1.06, 1.0), focus=(0.5, 0.6)),
+    dict(card=s_end, dur=4.2),
+]
+
+CUES = dict(lessons=[L_T0 + i * L_STEP for i in range(len(LESSONS))])
 
 
 def scene_dur(sc):
-    return sc["dur"]
+    return sc["clip"][2] if "clip" in sc else sc["dur"]
 
 
 def scene_timing():
@@ -154,13 +172,19 @@ def render_scene(sc, path):
     enc = kit.encoder(path)
     T = scene_dur(sc)
     n = int(round(T * FPS))
-    src = (None for _ in range(n)) if "card" in sc else frames(sc["slot"], sc["start"], T)
+    if "card" in sc:
+        src = (None for _ in range(n))
+    elif "still" in sc:
+        src = (sc["still"] for _ in range(n))
+    else:
+        src = frames(*sc["clip"])
     for f, img in enumerate(src):
         t = f / FPS
         if "card" in sc:
             fr = sc["card"](t, T)
         else:
-            fr = kit.ken_burns(img, t / T, *sc["zoom"]).convert("RGBA")
+            fx, fy = sc.get("focus", (0.5, 0.5))
+            fr = kit.ken_burns(img, t / T, *sc["zoom"], fx=fx, fy=fy).convert("RGBA")
             sc["overlay"](fr, t, T)
         enc.stdin.write(fr.convert("RGB").tobytes())
     enc.stdin.close()
@@ -168,9 +192,6 @@ def render_scene(sc, path):
 
 
 def main():
-    missing = [h[0] for h in HOURS if not os.path.exists(os.path.join(FOOTAGE, f"{h[0]}.mp4"))]
-    if missing:
-        raise SystemExit(f"Missing footage {missing} — run reels/day07/fetch_pexels.py first.")
     _sspec = importlib.util.spec_from_file_location("day07_score", os.path.join(HERE, "score.py"))
     score = importlib.util.module_from_spec(_sspec)
     _sspec.loader.exec_module(score)
