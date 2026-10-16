@@ -232,8 +232,8 @@ def build(kit, tag):
     drp, drp_shadow = dropper()
     fing, fing_tip = rotated_finger(-125)  # enters from the bottom-right, pointing up-left
     bot_grad = kit.gradient(0.6, 900, bottom=True)
-    head = kit.headline(["Try it on your skin."], 80)
-    sub = kit.sub(["No pressure.", "Just feel the texture."], 44)
+    head = kit.headline(["They tried it", "on their skin."], 80)
+    sub = kit.sub(["No pressure.", "Just the texture."], 44)
 
     def frame(t, T):
         fr = skin.copy()
