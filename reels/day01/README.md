@@ -32,7 +32,7 @@ Day 1 of building SPOT. 🤍
 
 We received 35 samples. Most of them got a "no".
 
-Countless manufacturers. Weeks on the road.
+15 manufacturers. Weeks on the road.
 Every sample opened, tested, and judged against one question:
 would we put this on our own skin?
 

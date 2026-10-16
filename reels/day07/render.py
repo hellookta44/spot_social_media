@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import tempfile
 
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REELS = os.path.join(HERE, "..")
@@ -39,15 +39,6 @@ TAG_INK_SUB = kit.text_layer(["BUILDING SPOT"], kit.F_MEDIUM, 28, INK, tracking=
 
 def frames(name, start, dur, speed=1.0):
     return d3.footage_frames(name, start, dur, speed, None, footage_dir=FOOTAGE)
-
-
-def still(name):
-    img = Image.open(os.path.join(FOOTAGE, name)).convert("RGB")
-    s = max(W / img.width, H / img.height)
-    img = img.resize((round(img.width * s), round(img.height * s)), Image.LANCZOS)
-    x0, y0 = (img.width - W) // 2, (img.height - H) // 2
-    img = img.crop((x0, y0, x0 + W, y0 + H))
-    return ImageEnhance.Color(ImageEnhance.Contrast(img).enhance(1.06)).enhance(0.95)
 
 
 def headline_scene(lines, size=96, k_lines=None, y=500, double_grad=True):
@@ -90,7 +81,7 @@ LESSONS = [
 L_TITLE = serif_layer(["What Beauty Asia", "taught us"], 84, INK, weight=600)
 L_NUMS = [serif_layer([n], 100, GOLD, weight=500, italic=True) for n, _ in LESSONS]
 L_TEXT = [serif_layer(lines, 60, INK, weight=500, line_gap=1.12, align="left") for _, lines in LESSONS]
-L_T0, L_STEP = 0.7, 0.85
+L_T0, L_STEP = 0.8, 1.2
 L_RULE = Image.new("RGBA", (120, 2), GOLD + (255,))
 
 
@@ -125,30 +116,125 @@ def s_end(t, T):
     return fr
 
 
+# --------------------------------------------------------------------------- editorial photo frames
+
+FRAME_W, FRAME_H = 760, 950           # 4:5 frame for every photo
+FRAME_CY = 1190
+BORDER = 16
+
+
+def enhance(img):
+    """Phone photo → clean editorial grade: even contrast, softer reds, warm tone, crisp detail."""
+    img = ImageOps.autocontrast(img, cutoff=1)
+    img = ImageEnhance.Color(img).enhance(0.86)
+    img = ImageEnhance.Brightness(img).enhance(1.03)
+    r, g, b = img.split()
+    img = Image.merge("RGB", (r.point(lambda v: min(255, int(v * 1.03))), g, b.point(lambda v: int(v * 0.95))))
+    return img.filter(ImageFilter.UnsharpMask(radius=2, percent=70, threshold=3))
+
+
+def crop_to(img, w, h, fx=0.5, fy=0.5):
+    s = max(w / img.width, h / img.height)
+    img = img.resize((round(img.width * s), round(img.height * s)), Image.LANCZOS)
+    x0, y0 = int((img.width - w) * fx), int((img.height - h) * fy)
+    return img.crop((x0, y0, x0 + w, y0 + h))
+
+
+def photo_set(name, fx=0.5, fy=0.5):
+    raw = Image.open(os.path.join(FOOTAGE, name)).convert("RGB")
+    pic = enhance(raw)
+    bg = crop_to(raw, W // 4, H // 4).filter(ImageFilter.GaussianBlur(10)).resize((W, H), Image.BICUBIC)
+    bg = ImageEnhance.Brightness(ImageEnhance.Color(bg).enhance(0.7)).enhance(0.5)
+    big = crop_to(pic, int(FRAME_W * 1.08), int(FRAME_H * 1.08), fx, fy)   # room for the inner push-in
+    return bg.convert("RGBA"), big
+
+
+SHADOW = Image.new("RGBA", (FRAME_W + 2 * BORDER + 160, FRAME_H + 2 * BORDER + 160), (0, 0, 0, 0))
+ImageDraw.Draw(SHADOW).rectangle([80, 100, 80 + FRAME_W + 2 * BORDER, 100 + FRAME_H + 2 * BORDER], fill=(0, 0, 0, 150))
+SHADOW = SHADOW.filter(ImageFilter.GaussianBlur(30))
+
+
+def framed_scene(name, lines, k_lines=None, tilt=-2.0, fx=0.5, fy=0.5, size=88):
+    bg, big = photo_set(name, fx, fy)
+    h = title(lines, size)
+    k = kicker(k_lines, 40) if k_lines else None
+
+    def card(t, T):
+        fr = bg.copy()
+        fr.alpha_composite(kit.TOP_GRAD)
+        place(fr, TAG, W / 2, 215, 1, rise=0)
+        # inner slow push-in
+        z = 1.0 + 0.07 * kit.ease_in_out(t / T)
+        cw, ch = big.width / z / 1.0, big.height / z
+        x0, y0 = (big.width - cw) / 2, (big.height - ch) / 2
+        inner = big.resize((FRAME_W, FRAME_H), Image.BICUBIC, box=(x0, y0, x0 + cw, y0 + ch))
+        framed = Image.new("RGBA", (FRAME_W + 2 * BORDER, FRAME_H + 2 * BORDER), (250, 248, 244, 255))
+        framed.paste(inner, (BORDER, BORDER))
+        # settle in: small scale-up and tilt easing to rest
+        k_in = kit.ease_out(t / 0.7)
+        ang = tilt * (1.6 - 0.6 * k_in)
+        sc = 0.94 + 0.06 * k_in
+        layer = Image.new("RGBA", SHADOW.size, (0, 0, 0, 0))
+        layer.alpha_composite(SHADOW)
+        layer.alpha_composite(framed, (80, 80))
+        layer = layer.rotate(ang, resample=Image.BICUBIC, expand=True)
+        place(fr, layer, W / 2, FRAME_CY, min(1, t / 0.25), rise=30 * (1 - k_in), scale=sc)
+        place(fr, h, W / 2, 440, appear(t, 0.25))
+        if k:
+            place(fr, k, W / 2, 440 + h.height / 2 + 40, appear(t, 0.9))
+        return fr
+    return card
+
+
+# --------------------------------------------------------------------------- interstitial + closing cards
+
+I_KICK = kit.text_layer(["BEAUTY ASIA  ·  EXPO CENTRE"], kit.F_SEMIBOLD, 30, GOLD, tracking=8)
+I_TITLE = serif_layer(["One expo.", "Real conversations.", "One question:"], 88, INK, weight=600)
+I_Q = serif_layer(["what makes skincare", "worth trusting?"], 76, INK, weight=500, italic=True)
+
+
+def s_intro(t, T):
+    fr = Image.new("RGBA", (W, H), CREAM + (255,))
+    place(fr, TAG_INK, W / 2, 196, 1, rise=0)
+    place(fr, TAG_INK_SUB, W / 2, 254, 1, rise=0)
+    place(fr, I_KICK, W / 2, 560, appear(t, 0.05))
+    place(fr, L_RULE, W / 2, 615, appear(t, 0.2), rise=0)
+    place(fr, I_TITLE, W / 2, 800, appear(t, 0.3, 0.6))
+    place(fr, I_Q, W / 2, 1080, appear(t, 1.3, 0.6))
+    return fr
+
+
+C_TITLE = serif_layer(["Everything we learned", "goes into SPOT."], 88, INK, weight=600)
+C_SUB = serif_layer(["Formulas worth explaining."], 64, GOLD, weight=500, italic=True)
+
+
+def s_close(t, T):
+    fr = Image.new("RGBA", (W, H), CREAM + (255,))
+    place(fr, TAG_INK, W / 2, 196, 1, rise=0)
+    place(fr, TAG_INK_SUB, W / 2, 254, 1, rise=0)
+    place(fr, C_TITLE, W / 2, 820, appear(t, 0.2, 0.6))
+    place(fr, L_RULE, W / 2, 960, appear(t, 0.8), rise=0)
+    place(fr, C_SUB, W / 2, 1040, appear(t, 1.0, 0.6))
+    return fr
+
+
 # --------------------------------------------------------------------------- timeline
 
-WALK = still("walking_hall.jpg")
-BOOTH = still("ingredient_booth.jpg")
-NOTES = still("taking_notes.jpg")
-WALK2 = still("walking_hall_2.jpg")
-
 SCENES = [
-    dict(clip=("expo_arrival.mp4", 0.3, 3.2, 0.85), overlay=s_arrive, zoom=(1.0, 1.06)),
-    dict(still=WALK, dur=3.0, overlay=headline_scene(["Hall after hall.", "Brand after brand."], 92),
-         zoom=(1.0, 1.08), focus=(0.5, 0.6)),
-    dict(still=BOOTH, dur=3.2, overlay=headline_scene(["We met ingredient", "suppliers."], 92,
-                                                      ["Where does every raw material come from?"]),
-         zoom=(1.0, 1.07), focus=(0.4, 0.5)),
-    dict(clip=("skin_analyzer.mp4", 0.0, 2.4, 0.5), overlay=headline_scene(["Saw the newest", "skin tech."], 96),
-         zoom=(1.0, 1.05)),
-    dict(still=NOTES, dur=3.2, overlay=headline_scene(["Asked questions.", "Took notes."], 96,
-                                                      ["Lots of notes."]),
-         zoom=(1.0, 1.07), focus=(0.6, 0.45)),
-    dict(card=s_lessons, dur=4.4),
-    dict(still=WALK2, dur=3.0, overlay=headline_scene(["Came home with ideas."], 92,
-                                                      ["(and a few bags)"]),
-         zoom=(1.06, 1.0), focus=(0.5, 0.6)),
-    dict(card=s_end, dur=4.2),
+    dict(clip=("expo_arrival.mp4", 0.0, 4.2, 0.95), overlay=s_arrive, zoom=(1.0, 1.08)),
+    dict(card=s_intro, dur=3.4),
+    dict(card=framed_scene("walking_hall.jpg", ["Hall after hall.", "Brand after brand."], tilt=-2.0, fy=0.35), dur=3.8),
+    dict(card=framed_scene("ingredient_booth.jpg", ["We met ingredient", "suppliers."],
+                           ["Where does every raw material come from?"], tilt=2.0, fx=0.45, fy=0.55), dur=4.0),
+    dict(clip=("skin_analyzer.mp4", 0.0, 2.8, 0.42), overlay=headline_scene(["Saw the newest", "skin tech."], 96),
+         zoom=(1.0, 1.06)),
+    dict(card=framed_scene("taking_notes.jpg", ["Asked questions.", "Took notes."], ["Lots of notes."],
+                           tilt=-1.6, fx=0.62, fy=0.4), dur=4.0),
+    dict(card=s_lessons, dur=6.0),
+    dict(card=framed_scene("walking_hall_2.jpg", ["Came home with ideas."], ["(and a few bags)"],
+                           tilt=1.8, fy=0.4), dur=3.6),
+    dict(card=s_close, dur=3.4),
+    dict(card=s_end, dur=4.5),
 ]
 
 CUES = dict(lessons=[L_T0 + i * L_STEP for i in range(len(LESSONS))])

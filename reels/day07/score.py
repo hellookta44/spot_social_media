@@ -3,7 +3,8 @@
 Same production as Days 2/5 (sidechain pad, sub, kick, snaps, shaker, piano hook
 + bell), brighter in A major: A – F#m – D – E. SFX: crowd murmur and footsteps in
 the halls, a scanner beep + sweep on the skin analyzer, pen scratches on the notes,
-a bell per lesson, a paper-bag rustle on the last walk, shimmer on the logo.
+a soft thud as each framed photo lands, a bell per lesson, a paper-bag rustle on
+the last walk, a calm closing card, shimmer on the logo.
 """
 import importlib.util
 import os
@@ -70,7 +71,7 @@ def bag_rustle(dur=1.0):
 
 
 def compose(starts, total, cues, path):
-    s_arrive, s_walk, s_booth, s_scan, s_notes, s_less, s_walk2, s_end = starts
+    s_arrive, s_intro, s_walk, s_booth, s_scan, s_notes, s_less, s_walk2, s_close, s_end = starts
     tr = m.Track(total + 0.5)
     pads = m.Track(total + 0.5)
     kicks = []
@@ -78,7 +79,12 @@ def compose(starts, total, cues, path):
     # Arrival: pad + shimmer, crowd fades in, riser into the beat.
     pads.add(0.0, m.pad(s2.PROG[0]["pad"], s_walk + 0.3, attack=0.4, bright=1.0), 0.24, verb=0.6)
     tr.add(0.2, s3.shimmer([81, 85, 88, 93]), 0.05, pan=0.2, verb=0.7)
-    tr.add(0.0, crowd(s_less + 0.5), 0.05, verb=0.3)
+    tr.add(0.0, crowd(s_less + 0.5), 0.05, verb=0.3)  # under the hall shots
+    tr.add(s_intro - 0.3, m.whoosh(0.45), 0.06, verb=0.2)
+    pads.add(s_intro, m.pad(s2.PROG[1]["pad"], s_walk - s_intro + 0.3, attack=0.3, bright=1.1), 0.22, verb=0.6)
+    for j, n in enumerate([73, 76, 81]):
+        tr.add(s_intro + 0.3 + j * 0.45, m.epiano(n, 1.8, 0.7), 0.09, pan=-0.2 + 0.2 * j, verb=0.6)
+    tr.add(s_intro + 1.3, m.bell(85, 2.0), 0.06, verb=0.7)
     tr.add(s_walk - 1.0, m.riser(1.0), 0.04, verb=0.4)
 
     # Halls → booth → scanner → notes: full groove, hook from the booth on.
@@ -87,6 +93,8 @@ def compose(starts, total, cues, path):
     for t in (s_walk, s_booth, s_scan, s_notes):
         tr.add(t - 0.3, m.whoosh(0.45), 0.05, verb=0.2)
     tr.add(s_walk, footsteps(s_booth - s_walk), 0.10, pan=-0.1)
+    for t in (s_walk, s_booth, s_notes, s_walk2):
+        tr.add(t + 0.05, m.thud(), 0.12, verb=0.25)
     tr.add(s_scan + 0.15, scanner(), 0.10, pan=0.15, verb=0.3)
     tr.add(s_notes + 0.5, s2.pen_tick(), 0.12, verb=0.2)
     tr.add(s_notes + 1.0, s3.rub_swish(1.4, rate=3.0), 0.04, verb=0.2)
@@ -101,8 +109,12 @@ def compose(starts, total, cues, path):
     # Last walk: groove back with hook, footsteps + bag rustle.
     tr.add(s_walk2 - 0.4, m.riser(0.4), 0.03, verb=0.4)
     tr.add(s_walk2, m.boom(1.4, 46), 0.22, verb=0.35)
-    kicks += s2.groove(tr, pads, s_walk2, s_end, hook=HOOK)
-    tr.add(s_walk2, footsteps(s_end - s_walk2), 0.09, pan=0.1)
+    kicks += s2.groove(tr, pads, s_walk2, s_close, hook=HOOK)
+    tr.add(s_walk2, footsteps(s_close - s_walk2), 0.09, pan=0.1)
+    # Closing statement: drums out, warm pad + slow keys.
+    tr.add(s_close - 0.3, m.whoosh(0.45), 0.06, verb=0.3)
+    s2.groove(tr, pads, s_close, s_end, drums=False, snaps=False, shake=False, hook=HOOK, keys=False)
+    tr.add(s_close + 0.2, m.bell(88, 2.4), 0.06, verb=0.7)
     tr.add(s_walk2 + 0.4, bag_rustle(), 0.06, pan=-0.2, verb=0.2)
     tr.add(s_end - 0.5, m.whoosh(0.7), 0.08, verb=0.4)
 
