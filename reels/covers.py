@@ -122,6 +122,18 @@ def cover_day07():
     return compose(bg, "07", ["Beauty", "Asia."], "a day at the expo.", big_size=200)
 
 
+def cover_day08():
+    """Founder frame lifted 210px so the face sits above the hook; the shaded bottom hides the seam."""
+    src = grab("day03", "founder_skin_test.mp4", 0.6)
+    lifted = Image.new("RGB", (W, H), (12, 9, 8))
+    lifted.paste(src, (0, -210))
+    a = np.clip((np.arange(H)[:, None] - (H - 520)) / 300, 0, 1).repeat(W, axis=1)  # fade into the fill
+    fade = Image.new("RGBA", (W, H), (12, 9, 8, 0))
+    fade.putalpha(Image.fromarray((a * 255).astype(np.uint8)))
+    lifted = Image.alpha_composite(lifted.convert("RGBA"), fade).convert("RGB")
+    return compose(cinematic(lifted), "08", ["Why I started", "SPOT."], "a note from the founder.", big_size=140)
+
+
 def d3_still(day, name):
     img = Image.open(os.path.join(HERE, day, "footage", name)).convert("RGB")
     s = max(W / img.width, H / img.height)
@@ -152,7 +164,7 @@ def cover_day06():
     return fr.convert("RGB")
 
 
-COVERS = {"01": cover_day01, "02": cover_day02, "03": cover_day03, "04": cover_day04, "05": cover_day05, "06": cover_day06, "07": cover_day07}
+COVERS = {"01": cover_day01, "02": cover_day02, "03": cover_day03, "04": cover_day04, "05": cover_day05, "06": cover_day06, "07": cover_day07, "08": cover_day08}
 
 
 def main():
