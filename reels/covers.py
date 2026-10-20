@@ -12,7 +12,7 @@ import importlib.util
 import os
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 _spec = importlib.util.spec_from_file_location("day06_render", os.path.join(HERE, "day06", "render.py"))
@@ -123,27 +123,13 @@ def cover_day07():
 
 
 def cover_day08():
-    """Typewritten letter cover: the hook typed big on the Day 8 paper, gold pen under SPOT."""
+    """The pour shot (text painted out, graded) with the Day 8 hook."""
     spec = importlib.util.spec_from_file_location("day08_render", os.path.join(HERE, "day08", "render.py"))
     d8 = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(d8)
-    fr = d8.PAPER.resize((W, H), Image.LANCZOS).convert("RGBA")
-    kit.place(fr, badge("08", INK), W / 2, SAFE_TOP + 110, rise=0)
-    f = ImageFont.truetype(d8.F_TYPE_BOLD, 150)
-    cw = f.getlength("M")
-    d = ImageDraw.Draw(fr)
-    lines = ["WHY I", "STARTED", "SPOT."]
-    y0 = SAFE_TOP + 300
-    for i, ln in enumerate(lines):
-        x = (W - cw * len(ln)) / 2
-        d.text((x, y0 + i * 190), ln, font=f, fill=d8.TYPE_INK)
-    x0 = (W - cw * 5) / 2
-    pts = d8.pen_stroke(x0 * 2, (x0 + cw * 5) * 2, (y0 + 2 * 190 + 165) * 2, 3)
-    d.line([(px / 2, py / 2) for px, py in pts], fill=d8.GOLD_PEN, width=9, joint="curve")
-    line = tight(d3.serif_layer(["a letter from the founder."], 74, INK, weight=500, italic=True))
-    place_box(fr, line, W / 2, top=y0 + 3 * 190 + 90)
-    place_box(fr, logo(200, dark=True), W / 2, bottom=SAFE_BOT - 40)
-    return fr.convert("RGB")
+    small, _ = d8.portrait("pour")
+    bg = cinematic(d8.plate(small).resize((W, H), Image.LANCZOS), zoom=1.04, focus=(0.5, 0.3))
+    return compose(bg, "08", ["What goes into", "one bottle?"], "the journey of a formula.", big_size=128)
 
 
 def d3_still(day, name):

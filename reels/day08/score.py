@@ -1,11 +1,10 @@
-"""Original score + sound design for the SPOT Day 8 Reel: the typewritten letter (all synthesised).
+"""Original score + sound design for the SPOT Day 8 Reel: the journey of one bottle (all synthesised).
 
-The typewriter is the lead instrument: every keystroke is a struck key (click,
-type-bar slap, platen thump), spaces are softer, and each line ends with the
-margin bell and the carriage-return ratchet. Underneath, a hushed F-major piano
-(F – Dm – Bb – C) with a warm pad. When the camera pulls back the room opens up:
-a soft boom, the piano hook and a light groove carry the pen marks (felt-tip
-squeaks on each underline) and the signature, then an Fmaj9 resolve on the logo.
+Cinematic pulse in D minor → F (Dm – Bb – F – C) on the Day 2 engine: pad, sub,
+soft kick, piano hook. Room tone of a quiet production floor runs underneath, and
+every shot has its own foley: liquid pour, mixer motor + swirl, pipette drip and
+glass clink, filling-nozzle hiss + conveyor ticks, cap screw clicks, label-feed
+whirr, glass bottles touching, and a calm resolve with shimmer for the hero shot.
 """
 import importlib.util
 import os
@@ -19,17 +18,16 @@ s2 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(s2)
 s3, m = s2.s3, s2.m
 SR = m.SR
-rng = np.random.default_rng(88)
+rng = np.random.default_rng(800)
 
 s2.PROG[:] = [
+    dict(bass=38, pad=[50, 53, 57, 62]),   # Dm
+    dict(bass=46, pad=[50, 53, 58, 62]),   # Bb
     dict(bass=41, pad=[53, 57, 60, 65]),   # F
-    dict(bass=38, pad=[53, 57, 62, 65]),   # Dm
-    dict(bass=46, pad=[53, 58, 62, 65]),   # Bb
-    dict(bass=48, pad=[55, 60, 64, 67]),   # C
+    dict(bass=48, pad=[52, 55, 60, 64]),   # C
 ]
-HOOK = [72, None, 74, None, 77, 76, 72, None,   70, None, 72, None, 69, None, None, None]
-s2.HOOK_B = [72, None, 74, None, 79, 77, 76, None,  77, None, 76, 72, 74, None, None, None]
-ARP = [0, 2, 1, 3, 2, 1, 3, 2]
+HOOK = [69, None, 72, None, 74, 72, 69, None,   70, None, 69, None, 65, None, None, None]
+s2.HOOK_B = [69, None, 72, None, 77, 76, 74, None,  72, None, 74, 72, 69, None, None, None]
 
 
 def _t(dur):
@@ -40,109 +38,104 @@ def bandnoise(n, centre, width=0.6):
     return m.spectral(rng.standard_normal(n), lambda f: np.exp(-((np.log(np.maximum(f, 1) / centre)) ** 2) / width))
 
 
-def key(vel=1.0, space=False):
-    """One typewriter strike: key click, type-bar slap on the platen, body thump."""
-    t = _t(0.12)
-    n = len(t)
-    pitch = rng.uniform(0.85, 1.2)
-    click = m.highpass(rng.standard_normal(n), 3000) * np.exp(-t / 0.0025)
-    slap_at = int(rng.uniform(0.011, 0.016) * SR)
-    slap = np.zeros(n)
-    k = t[: n - slap_at]
-    slap[slap_at:] = bandnoise(len(k), 2200 * pitch, 0.5) * np.exp(-k / 0.006) * 2.2
-    body = np.sin(2 * np.pi * 150 * pitch * t) * np.exp(-t / 0.018) * 0.5
-    if space:  # the space bar: duller, no type bar
-        return (0.4 * click + 1.4 * body + 0.5 * m.lowpass(rng.standard_normal(n), 900) * np.exp(-t / 0.02)) * vel
-    return (0.6 * click + slap + body) * vel
-
-
-def margin_bell():
-    t = _t(1.4)
-    y = (np.sin(2 * np.pi * 2093 * t) + 0.5 * np.sin(2 * np.pi * 2093 * 2.41 * t) * np.exp(-t / 0.2)
-         + 0.25 * np.sin(2 * np.pi * 2093 * 3.9 * t) * np.exp(-t / 0.08))
-    return y * np.exp(-t / 0.5) * np.minimum(1, t / 0.001)
-
-
-def carriage_return(dur=0.42):
-    """Ratchet clicks speeding up as the carriage slides back, then the stop."""
-    out = np.zeros(int((dur + 0.1) * SR))
-    tc = 0.0
-    gap = 0.03
-    while tc < dur:
-        k = _t(0.01)
-        i = int(tc * SR)
-        out[i:i + len(k)] += m.highpass(rng.standard_normal(len(k)), 2500) * np.exp(-k / 0.0015) * 0.5
-        tc += gap
-        gap *= 0.93
+def room_tone(dur):
+    """Production floor: low air-handling rumble + a faint electrical hum."""
     t = _t(dur)
-    out[:len(t)] += bandnoise(len(t), 900, 0.8) * np.sin(np.pi * t / dur) * 0.35   # slide
-    k = _t(0.1)
-    i = int(dur * SR)
-    out[i:i + len(k)] += (np.sin(2 * np.pi * 110 * k) * np.exp(-k / 0.03) +
-                          m.highpass(rng.standard_normal(len(k)), 1500) * np.exp(-k / 0.004))[: len(out) - i]
+    rumble = bandnoise(len(t), 140, 1.2)
+    hum = 0.25 * np.sin(2 * np.pi * 100 * t) + 0.12 * np.sin(2 * np.pi * 200 * t)
+    return (rumble + hum * 0.4) * np.minimum(1, t / 0.6) * np.clip((dur - t) / 0.8, 0, 1)
+
+
+def pour(dur):
+    """Liquid stream into a beaker: bubbly band noise, rising in pitch as it fills."""
+    t = _t(dur)
+    x = bandnoise(len(t), 700, 0.5) + 0.6 * bandnoise(len(t), 1800, 0.4)
+    gurgle = 0.6 + 0.4 * np.abs(m.lowpass(rng.standard_normal(len(t)), 25)) * 3
+    bubbles = np.zeros(len(t))
+    for tb in np.sort(rng.uniform(0.1, dur - 0.1, 22)):
+        k = _t(0.05)
+        f = rng.uniform(700, 1500) * (1 + 0.4 * tb / dur)
+        b = np.sin(2 * np.pi * np.cumsum(f * (1 + 2 * k)) / SR) * np.exp(-k / 0.012)
+        i = int(tb * SR)
+        bubbles[i:i + len(k)] += b[: len(bubbles) - i]
+    env = np.minimum(1, t / 0.15) * np.clip((dur - t) / 0.3, 0, 1)
+    return (x * gurgle + 0.5 * bubbles) * env
+
+
+def mixer(dur):
+    t = _t(dur)
+    f = 58 * (1 + 0.02 * np.sin(2 * np.pi * 0.7 * t))
+    motor = np.sin(2 * np.pi * np.cumsum(f) / SR) + 0.4 * np.sin(2 * np.pi * np.cumsum(3 * f) / SR)
+    swirl = bandnoise(len(t), 500, 0.8) * (0.6 + 0.4 * np.sin(2 * np.pi * 1.6 * t))
+    return (0.35 * motor + swirl) * np.minimum(1, t / 0.4) * np.clip((dur - t) / 0.4, 0, 1)
+
+
+def hiss(dur=0.5):
+    t = _t(dur)
+    return m.highpass(rng.standard_normal(len(t)), 3500) * np.exp(-t / (dur / 3)) * np.minimum(1, t / 0.01)
+
+
+def tick():
+    t = _t(0.03)
+    return m.highpass(rng.standard_normal(len(t)), 2000) * np.exp(-t / 0.003) + \
+        0.5 * np.sin(2 * np.pi * 900 * t) * np.exp(-t / 0.006)
+
+
+def cap_twist():
+    out = np.zeros(int(0.5 * SR))
+    for k in range(6):
+        c = tick() * (0.5 + 0.1 * k)
+        i = int((0.03 + 0.055 * k) * SR)
+        out[i:i + len(c)] += c
     return out
 
 
-def pen(dur):
-    """Felt-tip on paper: band-limited scratch with a stroke-shaped envelope."""
+def label_feed(dur):
     t = _t(dur)
-    x = bandnoise(len(t), 3800, 0.4) + 0.4 * bandnoise(len(t), 1200, 0.5)
-    wob = 0.7 + 0.3 * np.sin(2 * np.pi * 9 * t + rng.uniform(0, 6))
-    return x * wob * np.sin(np.pi * np.clip(t / dur, 0, 1)) ** 0.6
-
-
-def paper(dur=0.8):
-    t = _t(dur)
-    x = bandnoise(len(t), 2500, 0.9)
-    return x * np.abs(m.lowpass(rng.standard_normal(len(t)), 14)) * 3 * np.clip((dur - t) / 0.3, 0, 1)
-
-
-def piano_arps(tr, pads, t0, t1, gain, pad_gain):
-    b = 0
-    while t0 + b * s2.BAR < t1 - 0.05:
-        tb = t0 + b * s2.BAR
-        ch = s2.PROG[b % 4]
-        pads.add(tb, m.pad(ch["pad"], s2.BAR + 0.4, attack=0.6, release=0.9, bright=0.8), pad_gain, verb=0.7)
-        tr.add(tb, m.epiano(ch["bass"] + 12, 2.4, 0.6), gain * 0.9, pan=-0.15, verb=0.6)
-        for k, idx in enumerate(ARP[::2]):  # quarter notes: leaves room for the keys
-            tn = tb + k * s2.BEAT
-            if tn >= t1:
-                break
-            tr.add(tn, m.epiano(ch["pad"][idx] + 12, 1.4, 0.55), gain, pan=0.2, verb=0.65)
-        b += 1
+    whirr = np.sin(2 * np.pi * np.cumsum(np.full(len(t), 220.0)) / SR) * 0.3 + bandnoise(len(t), 1600, 0.3)
+    return whirr * np.minimum(1, t / 0.08) * np.clip((dur - t) / 0.12, 0, 1)
 
 
 def compose(starts, total, cues, path):
-    _, s_end = starts
+    s_pour, s_mix, s_test, s_fill, s_cap, s_label, s_row, s_hero, s_end = starts
     tr = m.Track(total + 0.5)
-    fx = m.Track(total + 0.5)      # typewriter + pens: not ducked by the sidechain
+    fx = m.Track(total + 0.5)
     pads = m.Track(total + 0.5)
     kicks = []
-    pull = cues["pull"]
 
-    # Paper in, then the letter: keys, bells and returns over a hushed piano.
-    fx.add(0.0, paper(0.7), 0.05, pan=-0.2, verb=0.15)
-    for t, ch in cues["keys"]:
-        space = ch == " "
-        fx.add(t, key(rng.uniform(0.8, 1.0), space), 0.42 if not space else 0.30,
-               pan=float(rng.uniform(-0.25, 0.25)), verb=0.08)
-    for t in cues["returns"]:
-        fx.add(t, margin_bell(), 0.10, pan=0.35, verb=0.25)
-        fx.add(t + 0.08, carriage_return(), 0.32, pan=-0.3, verb=0.1)
-    piano_arps(tr, pads, 0.0, pull, gain=0.17, pad_gain=0.30)
-    tr.add(0.25, s3.shimmer([77, 81, 84, 89]), 0.03, verb=0.7)
+    fx.add(0.0, room_tone(s_end + 0.4), 0.10)
 
-    # Pull-back: the room opens, boom + groove with the hook.
-    tr.add(pull - 0.9, m.riser(0.9), 0.04, verb=0.4)
-    tr.add(pull, m.whoosh(0.9), 0.06, verb=0.4)
-    tr.add(pull + 0.4, m.boom(1.6, 41), 0.20, verb=0.35)
-    kicks += s2.groove(tr, pads, pull + 0.4, s_end, snaps=True, shake=False, hook=HOOK, keys=False)
-    for t, dur, kind in cues["marks"]:
-        fx.add(t, pen(dur), 0.16 if kind == "under" else 0.18, pan=0.15, verb=0.15)
-        tr.add(t + dur * 0.9, m.bell(84 if kind == "under" else 77, 1.8), 0.04, verb=0.6)
-    t_sign, d_sign = cues["sign"]
-    fx.add(t_sign, pen(d_sign * 0.5), 0.14, pan=-0.1, verb=0.15)
-    fx.add(t_sign + d_sign * 0.55, pen(d_sign * 0.4), 0.12, pan=0.0, verb=0.15)
+    # Pour: hushed intro, pad + piano, the stream up front.
+    pads.add(0.0, m.pad(s2.PROG[0]["pad"], s_mix + 0.3, attack=0.5, bright=0.9), 0.24, verb=0.6)
+    tr.add(0.2, s3.shimmer([74, 77, 81, 86]), 0.04, pan=0.2, verb=0.7)
+    for j, n in enumerate([62, 65, 69, 74]):
+        tr.add(0.4 + j * 0.5, m.epiano(n, 1.8, 0.6), 0.08, pan=-0.2 + 0.13 * j, verb=0.6)
+    fx.add(0.1, pour(s_mix - 0.1), 0.22, pan=0.1, verb=0.2)
+    tr.add(s_mix - 0.8, m.riser(0.8), 0.04, verb=0.4)
+
+    # Mixing → hero: the pulse, hook from the filling line on.
+    tr.add(s_mix, m.boom(1.4, 38), 0.18, verb=0.35)
+    kicks += s2.groove(tr, pads, s_mix, s_fill, snaps=False, shake=True, hook=None, keys=True)
+    kicks += s2.groove(tr, pads, s_fill, s_hero, snaps=True, shake=True, hook=HOOK, keys=False)
+    for t in (s_mix, s_test, s_fill, s_cap, s_label, s_row):
+        tr.add(t - 0.3, m.whoosh(0.45), 0.045, verb=0.25)
+    fx.add(s_mix, mixer(s_test - s_mix + 0.2), 0.16, pan=-0.1, verb=0.15)
+    fx.add(s_test + 0.9, s3.plip(), 0.14, pan=0.1, verb=0.3)
+    fx.add(s_test + 1.3, s3.glass_clink(1.05), 0.05, pan=0.15, verb=0.4)
+    for k in range(int((s_cap - s_fill) / 0.32)):
+        fx.add(s_fill + 0.15 + k * 0.32, tick(), 0.10, pan=-0.3 + 0.08 * k, verb=0.1)
+    fx.add(s_fill + 0.35, hiss(0.45), 0.08, pan=0.1, verb=0.2)
+    fx.add(s_fill + 1.35, hiss(0.45), 0.07, pan=-0.1, verb=0.2)
+    fx.add(s_cap + 0.4, cap_twist(), 0.20, pan=0.05, verb=0.15)
+    fx.add(s_cap + 1.5, cap_twist(), 0.16, pan=-0.1, verb=0.15)
+    fx.add(s_label + 0.3, label_feed(1.0), 0.07, pan=0.2, verb=0.15)
+    fx.add(s_row + 0.4, s3.glass_clink(0.92), 0.05, pan=-0.2, verb=0.4)
+    fx.add(s_row + 0.9, s3.glass_clink(1.0), 0.04, pan=0.2, verb=0.4)
+
+    # Hero: drums out, warm pad, hook on the piano.
+    tr.add(s_hero - 0.4, m.whoosh(0.6), 0.06, verb=0.4)
+    s2.groove(tr, pads, s_hero, s_end, drums=False, snaps=False, shake=False, hook=HOOK, keys=False)
+    tr.add(s_hero + 0.2, s3.shimmer([81, 84, 88, 93]), 0.04, verb=0.8)
     tr.add(s_end - 0.5, m.whoosh(0.7), 0.07, verb=0.4)
 
     # End card: Fmaj9 resolve + shimmer.
@@ -153,7 +146,7 @@ def compose(starts, total, cues, path):
         tr.add(s_end + 0.12 + j * 0.13, m.epiano(n, 2.8, 0.75), 0.09, pan=-0.3 + 0.15 * j, verb=0.7)
     tr.add(s_end + 0.1, s3.shimmer([84, 88, 91, 96]), 0.05, verb=0.8)
 
-    # Mix: music bus sidechained to the kick, typewriter on top, shared room reverb.
+    # Mix: music bus sidechained to the kick, foley on top, shared room.
     n_all = tr.dry.shape[1]
     env = s2.sidechain(n_all, kicks)
     dry = tr.dry + pads.dry * env + fx.dry
@@ -163,7 +156,7 @@ def compose(starts, total, cues, path):
     mix = np.stack([m.highpass(mix[0], 40), m.highpass(mix[1], 40)])
     n = int(total * SR)
     mix = mix[:, :n]
-    mix *= 10 ** (-17 / 20) / np.sqrt(np.mean(mix ** 2))
+    mix *= 10 ** (-16.5 / 20) / np.sqrt(np.mean(mix ** 2))
     mix = np.tanh(mix * 1.15) / np.tanh(1.15)
     mix *= 10 ** (-1 / 20) / np.max(np.abs(mix))
     t = np.arange(n) / SR

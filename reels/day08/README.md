@@ -1,57 +1,59 @@
-# SPOT — Day 8 Reel: "Why I started SPOT" (the typewritten letter)
+# SPOT — Day 8 Reel: "What goes into one bottle?"
 
 | File | What it is |
 |---|---|
-| `out/spot_day08_reel.mp4` | Final reel with original music + sound design (1080×1920, 30 fps, 37.9s) |
-| `out/spot_day08_reel_no_music.mp4` | Same reel, silent — for a trending sound or your own voice-over |
+| `out/spot_day08_reel.mp4` | Final reel with original music + sound design (1080×1920, 30 fps, 25.5s) |
+| `out/spot_day08_reel_no_music.mp4` | Same reel, silent — for a trending sound in Instagram |
 | `out/spot_day08_music.wav` | Score + sound design on its own (`score.py`) |
-| `out/spot_day08_cover.jpg` | Designed cover (typed "WHY I STARTED SPOT." with a gold underline) — made by `reels/covers.py` |
+| `out/spot_day08_cover.jpg` | Designed cover ("What goes into one bottle?") — made by `reels/covers.py` |
 
-A new format for the series, with no footage: the founder's letter is typed live on
-cream paper (Courier typewriter face, uneven ink strikes, paper grain). The camera rides
-the typing line, then pulls back to show the whole page on a dark desk, where a red pen
-strikes "Big promises.", a gold pen underlines the key words, and the letter is signed in ink.
+Source: `footage/process.mov`, the 16s process clip (8 AI-generated stills with
+captions printed on them). Each still is cropped to full-bleed 9:16, the printed
+text is painted out, and the shot gets a film treatment: grade, upscale, slow dolly
+and handheld drift, rack focus, live liquid motion on the pour and the mixing vat,
+grain, vignette and bloom.
 
-The letter is written from the series so far. **Check that the wording is true to you**
-(edit `HEAD`, `PARAS` and `MARKS` in `render.py`; the timing and sounds follow the text).
+**Before posting:** these visuals are AI-generated, so switch on Instagram's
+"AI info" label when you post (Meta asks for it on realistic AI video). The copy is
+written as the journey of a formula, not as footage of a specific factory.
+
+The previous Day 8 (typewritten founder letter) is kept in `reels/backlog/founder_letter/`.
 
 ## Storyboard
 
-| Time | On screen | Sound |
-|---|---|---|
-| 0–1.5s | Close on the paper: **WHY I STARTED SPOT.** types out | Paper, typewriter keys, shimmer |
-| 1.5–24s | The letter types line by line, the camera following: *Dear you, I started SPOT because I couldn't find skincare I actually trusted. Long labels. Big promises. Nobody explaining what's inside. So I asked questions. I tested 35 samples. I visited 15 factories. I said no. A lot. SPOT is the skincare I wanted to find: simple, honest, explained. If I wouldn't put it on my own skin, it doesn't go into SPOT.* | Keys, margin bell and carriage return on each line, quiet F-major piano |
-| 24–26.5s | Camera pulls back: the whole letter on the desk | Riser, whoosh, soft boom; the groove and the piano hook come in |
-| 26.5–31s | Red pen strikes **Big promises.**; gold pen underlines **actually trusted.**, **35 samples.**, **15 factories.**, **simple, honest, explained.** | Pen squeak + bell on each mark |
-| 31–33.5s | Signed: *— Founder, SPOT* | Pen on paper |
-| 33.5–38s | SPOT. end card: *Day 9: my skin story.* | Fmaj9 resolve + shimmer |
+| Time | Shot | On-screen text | Sound |
+|---|---|---|---|
+| 0–3s | Ingredient pour (stream moving) | **What goes into one bottle?** The journey of a formula. | Room tone, liquid pour, piano |
+| 3–6s | Mixing vat (liquid turning) | **Mixed slowly. Never rushed.** | Boom, pulse starts, mixer motor + swirl |
+| 6–8.5s | Pipette over a test vial | **Tested before it's trusted.** | Drip, glass clink |
+| 8.5–11s | Filling line | **Filled with care.** | Conveyor ticks, nozzle hiss, hook enters |
+| 11–13.5s | Dropper caps | **Sealed to stay fresh.** | Cap screw clicks |
+| 13.5–16s | Labelling | **Packaging comes last.** The formula always comes first. | Label feed |
+| 16–18.5s | Finished bottles | **Simple. Honest. Explained.** | Glass touches |
+| 18.5–21.5s | Hero bottle | **Skincare products, coming soon.** Follow the journey. | Drums out, shimmer |
+| 21.5–25.5s | SPOT. end card | *Day 9: my skin story.* | Fmaj9 resolve |
 
 ## Instagram caption
 
 ```
 Day 8 of building SPOT. 🤍
 
-I wrote you a letter.
+What goes into one bottle?
 
-Why start a skincare brand?
-Because I couldn't find skincare I actually trusted.
-Long labels. Big promises. Nobody explaining what's inside.
+It starts with the ingredients.
+Mixed slowly. Never rushed.
+Tested before it's trusted.
+Filled, sealed — and packaging comes last,
+because the formula always comes first.
 
-So I asked questions. 35 samples. 15 factories.
-A lot of "no".
-
-SPOT is the skincare I wanted to find:
-simple, honest, explained.
-
-If I wouldn't put it on my own skin,
-it doesn't go into SPOT.
+Simple. Honest. Explained.
 
 Tomorrow: my skin story.
 Follow @shopspotbeauty for Day 9 ✨
 
-#SPOTbeauty #Day8 #WhyIStarted #FounderStory #LetterFromTheFounder
-#BuildingABrand #SkincareBrand #SkincareJourney #BehindTheBrand
-#ComingSoon #SkincareProducts #SmallBusiness
+#SPOTbeauty #Day8 #BuildingABrand #SkincareBrand #SkincareJourney
+#BehindTheBrand #HowItsMade #SkincareFormulation #ComingSoon
+#SkincareProducts #SmallBusiness
 ```
 
 ## Re-render

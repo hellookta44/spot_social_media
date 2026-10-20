@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
-"""Render the SPOT "Day 8" Instagram Reel: why I started SPOT, as a typewritten letter.
+"""Render the SPOT "Day 8" Instagram Reel: the journey of one bottle (process film).
 
 Usage:  python3 reels/day08/render.py
 Output: reels/day08/out/spot_day08_reel.mp4 (+ _no_music, music .wav)
         Cover: python3 reels/covers.py
 
-No footage: a letter is typed live on cream paper. The camera rides the typing
-line, pulls back to show the whole page on the desk, a gold pen underlines the
-key words, a red pen strikes "Big promises.", and the letter is signed in ink.
+Source: footage/process.mov, a 16s vertical slideshow of 8 process stills with text
+printed on them. Each still is cropped to full-bleed 9:16, its printed text is
+painted out, and it is given a cinematic treatment: graded, upscaled, a slow
+dolly + handheld drift, rack focus on some cuts, live liquid motion (pour stream,
+mixing vortex), film grain, vignette and a soft bloom. Series titles on top.
 """
 import importlib.util
+import math
 import os
 import shutil
 import subprocess
 import tempfile
 
 import numpy as np
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageEnhance, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REELS = os.path.join(HERE, "..")
@@ -25,310 +28,200 @@ d3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(d3)
 kit = d3.kit
 
+SRC = os.path.join(HERE, "footage", "process.mov")
 OUT = os.path.join(HERE, "out")
 W, H, FPS = kit.W, kit.H, kit.FPS
-LAST_XFADE = d3.LAST_XFADE
+XFADE, LAST_XFADE = d3.XFADE, d3.LAST_XFADE
 INK, CREAM = kit.INK, kit.CREAM
+GOLD = (176, 141, 87)
 place, appear = kit.place, kit.appear
-serif_layer = d3.serif_layer
+title, kicker, serif_layer = d3.title, d3.kicker, d3.serif_layer
+TAG = kit.make_tag("08")
+rng = np.random.default_rng(808)
 
-S = 2                                   # the page is drawn at 2x so close-ups stay crisp
-PW, PH = W * S, H * S
-TYPE_INK = (30, 28, 34)
-GOLD_PEN = (164, 122, 58)
-RED_PEN = (178, 52, 40)
-SIGN_INK = (36, 44, 92)
-DESK = (34, 28, 25)
-F_TYPE = "/usr/share/fonts/X11/Type1/c0419bt_.pfb"       # Courier 10 Pitch (typewriter face)
-F_TYPE_BOLD = "/usr/share/fonts/X11/Type1/c0583bt_.pfb"
-rng = np.random.default_rng(8)
-
-TAG_INK = kit.text_layer(["DAY 08"], kit.F_SEMIBOLD, 64, INK, tracking=10)
-TAG_INK_SUB = kit.text_layer(["BUILDING SPOT"], kit.F_MEDIUM, 28, INK, tracking=7)
-
-# --------------------------------------------------------------------------- the letter
-
-HEAD = "WHY I STARTED SPOT."
-PARAS = [
-    "Dear you,",
-    "I started SPOT because I couldn't find skincare I actually trusted.",
-    "Long labels. Big promises. Nobody explaining what's inside.",
-    "So I asked questions. I tested 35 samples. I visited 15 factories. I said no. A lot.",
-    "SPOT is the skincare I wanted to find:",
-    "simple, honest, explained.",
-    "If I wouldn't put it on my own skin, it doesn't go into SPOT.",
-]
-GAP_AFTER = [1, 1, 1, 1, 0, 1, 0]       # blank line after each paragraph
-MARKS = [  # (phrase, pen) drawn in this order after the pull-back
-    ("Big promises.", "strike"),
-    ("actually trusted.", "under"),
-    ("35 samples.", "under"),
-    ("15 factories.", "under"),
-    ("simple, honest, explained.", "under"),
-]
-
-HEAD_SIZE, BODY_SIZE = 50 * S, 40 * S
-LEFT, RIGHT = 120 * S, 960 * S
-HEAD_Y, BODY_Y, LINE_H = 400 * S, 540 * S, 60 * S
-f_head = ImageFont.truetype(F_TYPE_BOLD, HEAD_SIZE)
-f_body = ImageFont.truetype(F_TYPE, BODY_SIZE)
-CW_HEAD, CW_BODY = f_head.getlength("M"), f_body.getlength("M")
+# --------------------------------------------------------------------------- source stills
+# frame index in process.mov, image box inside the frame, printed-text boxes to paint out,
+# and the 9:16 crop centre (0..1 across the image). All boxes are source pixels.
+STILLS = {
+    "pour":   dict(frame=8, box=(16, 214, 522, 745), text=[(36, 226, 336, 292), (36, 668, 256, 736)], fx=0.52),
+    "mix":    dict(frame=24, box=(28, 236, 524, 721), text=[(40, 244, 186, 306), (40, 652, 232, 714)], fx=0.52),
+    "test":   dict(frame=40, box=(42, 236, 522, 721), text=[(56, 244, 252, 306), (56, 652, 258, 714)], fx=0.60),
+    "fill":   dict(frame=56, box=(16, 222, 522, 742), text=[(34, 242, 232, 306), (34, 680, 208, 746)], fx=0.50),
+    "cap":    dict(frame=72, box=(20, 246, 522, 720), text=[(40, 260, 268, 324), (40, 660, 212, 724)], fx=0.42),
+    "label":  dict(frame=88, box=(44, 246, 524, 720), text=[(56, 260, 188, 324), (56, 660, 212, 724)], fx=0.30),
+    "row":    dict(frame=104, box=(18, 292, 522, 668), text=[(24, 288, 160, 336)], fx=0.70),
+    "hero":   dict(frame=120, box=(24, 284, 524, 680), text=[], fx=0.10),
+}
 
 
-def layout():
-    """Every typed character: (x, y, ch, font, line). Positions are page pixels (2x)."""
-    chars = []
-    x = (PW - CW_HEAD * len(HEAD)) / 2
-    for c in HEAD:
-        chars.append([x, HEAD_Y, c, f_head, 0])
-        x += CW_HEAD
-    per_line = int((RIGHT - LEFT) // CW_BODY)
-    line, y = 1, BODY_Y
-    for p, gap in zip(PARAS, GAP_AFTER):
-        rows, cur = [], ""
-        for word in p.split(" "):
-            if cur and len(cur) + 1 + len(word) > per_line:
-                rows.append(cur)
-                cur = word
-            else:
-                cur = f"{cur} {word}" if cur else word
-        rows.append(cur)
-        for r_i, row in enumerate(rows):
-            for k, c in enumerate(row + (" " if r_i < len(rows) - 1 else "")):
-                chars.append([LEFT + k * CW_BODY, y, c, f_body, line])
-            line += 1
-            y += LINE_H
-        chars[-1].append("para")
-        y += LINE_H * gap
-    return chars, y
+def read_frame(i):
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", SRC, "-vf", f"select=eq(n\\,{i})", "-vsync", "0",
+                          "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                         capture_output=True, check=True).stdout
+    return Image.frombuffer("RGB", (540, 960), raw, "raw", "RGB", 0, 1).copy()
 
 
-CHARS, TEXT_END_Y = layout()
-SIGN_Y = TEXT_END_Y + 10 * S
+def paint_out(img, boxes):
+    """Remove printed captions: find the light, high-contrast glyph pixels inside each box and
+    fill them from the surrounding picture (iterative blur fill, coarse to fine)."""
+    a = np.asarray(img, np.float32).copy()
+    lum = a.mean(axis=2)
+    local = np.asarray(Image.fromarray(lum.astype(np.uint8)).filter(ImageFilter.MedianFilter(13)), np.float32)
+    mask = np.zeros(lum.shape, bool)
+    for x0, y0, x1, y1 in boxes:
+        sub = (lum[y0:y1, x0:x1] - local[y0:y1, x0:x1] > 22) & (lum[y0:y1, x0:x1] > 120)
+        mask[y0:y1, x0:x1] |= sub
+    m = Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7))
+    mask = np.asarray(m) > 0
+    for r in (8, 6, 4, 3, 2, 2, 1, 1, 1):
+        for _ in range(6):
+            blur = np.asarray(Image.fromarray(a.astype(np.uint8)).filter(ImageFilter.GaussianBlur(r)), np.float32)
+            a[mask] = blur[mask]
+    out = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+    # a touch of matching noise so the filled patches don't look smoother than the photo
+    n = rng.normal(0, 3.0, a.shape).astype(np.float32) * mask[..., None]
+    return Image.fromarray(np.clip(np.asarray(out, np.float32) + n, 0, 255).astype(np.uint8))
 
 
-def schedule():
-    """Keystroke times: steady rhythm, little human jitter, pauses at punctuation and line ends."""
-    t, times, returns = 0.35, [], []
-    for i, ch in enumerate(CHARS):
-        times.append(t)
-        c = ch[2]
-        step = (0.045 if ch[4] == 0 else 0.044) * rng.uniform(0.75, 1.3)
-        if c in ".:":
-            step += 0.20
-        elif c == ",":
-            step += 0.10
-        nxt = CHARS[i + 1] if i + 1 < len(CHARS) else None
-        if nxt is not None and nxt[4] != ch[4]:
-            step += 0.42 if len(ch) > 5 or ch[4] == 0 else 0.22
-            returns.append(t + 0.12)
-        t += step
-    return np.array(times), returns, t
+def grade(img):
+    """Shared film look: lifted blacks, warm highlights, cooler shadows, gentle contrast."""
+    a = np.asarray(img, np.float32) / 255
+    lum = a.mean(axis=2, keepdims=True)
+    a = 0.03 + 0.95 * a                                     # lift + soft roll-off
+    a = a + (a - lum) * -0.08                               # slightly calmer saturation
+    shadow, high = np.clip(1 - lum * 2, 0, 1), np.clip(lum * 2 - 1, 0, 1)
+    a += shadow * np.array([-0.012, 0.004, 0.018]) + high * np.array([0.022, 0.008, -0.02])
+    a = a + 0.08 * (a - 0.5) * (1 - np.abs(a - 0.5) * 2)    # s-curve
+    return Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
 
 
-KEY_T, RETURN_T, TYPE_END = schedule()
-
-# --------------------------------------------------------------------------- paper, ink, pens
-
-
-def make_paper():
-    base = np.ones((PH, PW, 3), np.float32) * np.array([244, 239, 230], np.float32)
-    lo = np.array(Image.fromarray((rng.random((PH // 64, PW // 64)) * 255).astype(np.uint8))
-                  .resize((PW, PH), Image.BICUBIC), np.float32) / 255 - 0.5
-    fine = rng.normal(0, 1, (PH, PW)).astype(np.float32)
-    fibre = np.array(Image.fromarray(np.clip(fine * 40 + 128, 0, 255).astype(np.uint8))
-                     .filter(ImageFilter.GaussianBlur(1.2)), np.float32) / 255 - 0.5
-    yy, xx = np.mgrid[0:PH, 0:PW].astype(np.float32)
-    vig = ((xx / PW - 0.5) ** 2 + (yy / PH - 0.42) ** 2) * 0.32
-    light = 1.0 - vig + 0.012 * lo + 0.03 * fibre
-    out = base * light[..., None]
-    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+def portrait(name):
+    st = STILLS[name]
+    fr = paint_out(read_frame(st["frame"]), st["text"])
+    img = fr.crop(st["box"])
+    cw = round(img.height * W / H)
+    x0 = int(np.clip(st["fx"] * img.width - cw / 2, 0, img.width - cw))
+    return grade(img.crop((x0, 0, x0 + cw, img.height))), (st["box"][0] + x0, st["box"][1])
 
 
-PAPER = make_paper()
-GRAIN = Image.fromarray(np.clip(rng.normal(246, 18, (PH, PW)), 0, 255).astype(np.uint8))
-INK_FILL = Image.new("RGB", (PW, PH), TYPE_INK)
+# --------------------------------------------------------------------------- live motion
+
+def remap(img, sx, sy):
+    """Bilinear sample img at float coords (sx, sy) — numpy, no scipy."""
+    a = np.asarray(img, np.float32)
+    h, w = a.shape[:2]
+    sx, sy = np.clip(sx, 0, w - 1.001), np.clip(sy, 0, h - 1.001)
+    x0, y0 = sx.astype(int), sy.astype(int)
+    fx, fy = (sx - x0)[..., None], (sy - y0)[..., None]
+    out = (a[y0, x0] * (1 - fx) * (1 - fy) + a[y0, x0 + 1] * fx * (1 - fy)
+           + a[y0 + 1, x0] * (1 - fx) * fy + a[y0 + 1, x0 + 1] * fx * fy)
+    return Image.fromarray(out.astype(np.uint8))
 
 
-def strike_masks():
-    """One ink mask per typed character, struck unevenly like a real typewriter."""
-    masks = []
-    for x, y, c, f, *_ in CHARS:
-        if c == " ":
-            masks.append(None)
-            continue
-        size = int(f.size * 1.4)
-        m = Image.new("L", (size, size), 0)
-        ImageDraw.Draw(m).text((0, 0), c, font=f, fill=int(255 * rng.uniform(0.86, 1.0)))
-        if rng.random() < 0.25:  # uneven strike: one side of the letter lighter
-            g = np.linspace(rng.uniform(0.7, 0.9), 1, size)[None, :]
-            m = Image.fromarray((np.array(m) * (g if rng.random() < 0.5 else g[:, ::-1])).astype(np.uint8))
-        masks.append((m.filter(ImageFilter.GaussianBlur(0.7)),
-                      int(x + rng.normal(0, 0.8)), int(y + rng.normal(0, 1.2))))
-    return masks
+def vortex(img, origin, centre, radius, shaft_halfw):
+    """Mixing vat: liquid turns around the shaft, fastest at the centre, still at the rim."""
+    cx, cy = centre[0] - origin[0], centre[1] - origin[1]
+    h, w = img.height, img.width
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    dx, dy = xx - cx, (yy - cy) * 1.9                       # vat seen at an angle: flatten the circle
+    r = np.sqrt(dx ** 2 + dy ** 2)
+    q = np.clip(r / radius, 0, 1)
+    fall = np.clip(4 * q * (1 - q), 0, 1) ** 1.2           # still at the shaft and the rim, fastest between
+    near = np.clip((np.abs(xx - cx) - shaft_halfw) / 40, 0, 1)
+    below = np.clip((yy - (cy + 50)) / 70, 0, 1)
+    fall *= np.maximum(near, below)                         # shaft and agitator stay rigid
+
+    def at(t):
+        ang = -0.09 * t * fall
+        c, s = np.cos(ang), np.sin(ang)
+        return remap(img, cx + c * dx - s * dy, cy + (s * dx + c * dy) / 1.9)
+    return at
 
 
-MASKS = strike_masks()
+def flow(img, origin, poly_x, y_range, width):
+    """Pour: the stream ripples and runs downward; the beaker surface shivers."""
+    h, w = img.height, img.width
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    ys = yy + origin[1]
+    xc = np.interp(ys, *poly_x) - origin[0]
+    inside = np.clip(1 - np.abs(xx - xc) / width, 0, 1) * ((ys > y_range[0]) & (ys < y_range[1]))
+
+    def at(t):
+        ph = (ys - 140 * t) / 9.0
+        wob = (np.sin(ph) + 0.5 * np.sin(ph * 2.3 + 1.7)) * 1.2 * inside
+        return remap(img, xx + wob, yy - 0.8 * inside * np.sin(ph * 1.7))
+    return at
 
 
-def phrase_spans(phrase):
-    """(x0, x1, top_y) per line covered by `phrase`, in page pixels."""
-    text = "".join(c[2] for c in CHARS)
-    i = text.index(phrase)
-    spans = {}
-    for ch in CHARS[i:i + len(phrase)]:
-        if ch[2] == " ":
-            continue
-        x0, x1, _ = spans.get(ch[4], (ch[0], ch[0], ch[1]))
-        spans[ch[4]] = (min(x0, ch[0]), max(x1, ch[0] + CW_BODY), ch[1])
-    return list(spans.values())
+# --------------------------------------------------------------------------- camera + film
+
+BIG = 1.14  # working plate size relative to the frame, room for moves
 
 
-def pen_stroke(x0, x1, y, seed):
+def plate(small):
+    big = small.resize((int(W * BIG), int(H * BIG)), Image.LANCZOS)
+    big = big.filter(ImageFilter.UnsharpMask(radius=3, percent=60, threshold=2))
+    bloom = big.filter(ImageFilter.GaussianBlur(28)).point(lambda v: max(0, v - 150) * 2)
+    return Image.fromarray(np.clip(np.asarray(big, np.int16) + np.asarray(bloom, np.int16) // 5, 0, 255)
+                           .astype(np.uint8))
+
+
+def handheld(t, seed):
     r = np.random.default_rng(seed)
-    n = 40
-    xs = np.linspace(x0 - 6 * S, x1 + 8 * S, n)
-    ys = y + 2.2 * S * np.sin(np.linspace(0, r.uniform(2, 4) * np.pi, n) + r.uniform(0, 6)) \
-        + np.linspace(r.uniform(-2, 2) * S, r.uniform(-5, -1) * S, n)
-    return list(zip(xs, ys))
+    ph = r.uniform(0, 6.3, 6)
+    dx = 5.0 * math.sin(2 * math.pi * 0.37 * t + ph[0]) + 2.4 * math.sin(2 * math.pi * 0.91 * t + ph[1])
+    dy = 4.2 * math.sin(2 * math.pi * 0.29 * t + ph[2]) + 2.0 * math.sin(2 * math.pi * 1.13 * t + ph[3])
+    rot = 0.22 * math.sin(2 * math.pi * 0.23 * t + ph[4]) + 0.08 * math.sin(2 * math.pi * 0.71 * t + ph[5])
+    return dx, dy, rot
 
 
-STROKES = []  # (mark index, points, colour, width)
-for k, (phrase, pen) in enumerate(MARKS):
-    for x0, x1, y in phrase_spans(phrase):
-        yy = y + (BODY_SIZE * 0.52 if pen == "strike" else BODY_SIZE * 1.02)
-        STROKES.append((k, pen_stroke(x0, x1, yy, k * 7 + int(x0)), RED_PEN if pen == "strike" else GOLD_PEN,
-                        5 * S if pen == "strike" else 6 * S))
+def camera(big, t, T, z0, z1, pan, seed):
+    """Dolly (z0 -> z1), slow pan (dx, dy in output px over the shot) and handheld drift."""
+    k = kit.ease_in_out(t / T)
+    z = z0 + (z1 - z0) * k
+    hx, hy, rot = handheld(t, seed)
+    cx = big.width / 2 + (pan[0] * (k - 0.5) + hx) * BIG
+    cy = big.height / 2 + (pan[1] * (k - 0.5) + hy) * BIG
+    s = BIG / z                                       # source px per output px
+    a, b = s * math.cos(math.radians(rot)), s * math.sin(math.radians(rot))
+    c0 = cx - a * W / 2 - b * H / 2
+    f0 = cy + b * W / 2 - a * H / 2
+    return big.transform((W, H), Image.AFFINE, (a, b, c0, -b, a, f0), resample=Image.BICUBIC)
 
 
-def draw_strokes(img, prog_per_mark):
-    d = ImageDraw.Draw(img)
-    for k, pts, col, wd in STROKES:
-        p = prog_per_mark[k]
-        if p <= 0:
-            continue
-        m = max(2, int(round(len(pts) * min(1, p))))
-        d.line(pts[:m], fill=col, width=wd, joint="curve")
-        for px, py in (pts[0], pts[m - 1]):
-            d.ellipse([px - wd / 2, py - wd / 2, px + wd / 2, py + wd / 2], fill=col)
+yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+VIGNETTE = (1 - 0.32 * (((xx / W - 0.5) ** 2) * 1.4 + ((yy / H - 0.5) ** 2)) ** 1.1)[..., None]
+GRAINS = [rng.normal(0, 1, (H // 2, W // 2)).astype(np.float32) for _ in range(6)]
+del yy, xx
 
 
-SIGN_TEXT = serif_layer(["Founder, SPOT"], 74 * S, SIGN_INK, weight=500, italic=True)
-SIGN_DASH = Image.new("RGBA", (60 * S, 3 * S), SIGN_INK + (255,))
-SIGN_X = LEFT + 80 * S
+def film(fr, f):
+    a = np.asarray(fr, np.float32) * VIGNETTE
+    g = GRAINS[f % len(GRAINS)]
+    g = np.repeat(np.repeat(g, 2, axis=0), 2, axis=1)[..., None]
+    lum = a.mean(axis=2, keepdims=True) / 255
+    a += g * (5.5 + 5 * (1 - np.abs(lum - 0.45) * 2))   # grain strongest in the mid-tones
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert("RGBA")
 
 
-def draw_signature(img, p):
-    """Write-on: soft-edged wipe left to right."""
-    if p <= 0:
-        return
-    w = SIGN_TEXT.width
-    edge = np.clip((p * (w + 80 * S) - np.arange(w)) / (80 * S), 0, 1)
-    a = (np.array(SIGN_TEXT.getchannel("A"), np.float32) * edge[None, :]).astype(np.uint8)
-    img.paste(SIGN_INK, (SIGN_X, SIGN_Y), Image.fromarray(a))
-    dw = int(SIGN_DASH.width * min(1, p * 4))
-    if dw > 0:
-        img.paste(SIGN_INK, (LEFT, SIGN_Y + SIGN_TEXT.height // 2 - 2 * S),
-                  SIGN_DASH.getchannel("A").crop((0, 0, dw, SIGN_DASH.height)))
+# --------------------------------------------------------------------------- overlays
+
+BOT_GRAD = kit.gradient(0.72, 900, bottom=True)
 
 
-# --------------------------------------------------------------------------- timeline
+def lower(lines, size=100, k_lines=None, y=1400, hook=False):
+    h = title(lines, size)
+    k = kicker(k_lines, 42) if k_lines else None
 
-PULL_T0 = TYPE_END + 0.5
-PULL_DUR = 1.9
-MARK_T0 = PULL_T0 + PULL_DUR + 0.2
-MARK_DUR, MARK_GAP = 0.55, 0.32
-MARK_T = [MARK_T0 + k * (MARK_DUR + MARK_GAP) for k in range(len(MARKS))]
-SIGN_T0 = MARK_T[-1] + MARK_DUR + 0.35
-SIGN_DUR = 1.4
-LETTER_DUR = SIGN_T0 + SIGN_DUR + 1.6
-END_DUR = 4.5
-Z_CLOSE, Z_FAR = 1.45, 0.92
+    def overlay(fr, t, T):
+        fr.alpha_composite(kit.TOP_GRAD)
+        fr.alpha_composite(BOT_GRAD)
+        place(fr, TAG, W / 2, 215, appear(t, 0.0, 0.35) if hook else 1, rise=0)
+        place(fr, h, W / 2, y, appear(t, 0.25, 0.55), rise=26)
+        if k:
+            place(fr, k, W / 2, y + h.height / 2 + 56, appear(t, 0.8))
+    return overlay
 
-
-def typed_count(t):
-    return int(np.searchsorted(KEY_T, t, side="right"))
-
-
-def cursor_target(n):
-    ch = CHARS[max(0, min(n, len(CHARS) - 1))]
-    return ch[0] / S, ch[1] / S
-
-
-def compose_page(n, t):
-    """Whole page at 2x with n characters, pen marks and signature (used once the camera is wide)."""
-    mask = Image.new("L", (PW, PH), 0)
-    for m in MASKS[:n]:
-        if m:
-            mask.paste(m[0], (m[1], m[2]), m[0])
-    page = Image.composite(INK_FILL, PAPER, ImageChops.multiply(mask, GRAIN))
-    draw_strokes(page, [(t - mt) / MARK_DUR for mt in MARK_T])
-    draw_signature(page, (t - SIGN_T0) / SIGN_DUR)
-    return page
-
-
-SHADOW = Image.new("L", (W + 200, H + 200), 0)
-ImageDraw.Draw(SHADOW).rectangle([100, 120, W + 100, H + 110], fill=170)
-SHADOW = SHADOW.filter(ImageFilter.GaussianBlur(40))
-TOP_FADE = Image.new("RGBA", (W, 480), (240, 235, 226, 255))
-TOP_FADE.putalpha(Image.fromarray((255 * np.clip((480 - np.arange(480)) / 200, 0, 1) ** 1.5)[:, None]
-                                  .repeat(W, 1).astype(np.uint8)))
-
-
-def letter_frames():
-    """Yield every frame of the letter scene."""
-    mask = Image.new("L", (PW, PH), 0)
-    drawn = 0
-    cx, cy = cursor_target(0)
-    full, full_key = None, None
-    for f in range(int(round(LETTER_DUR * FPS))):
-        t = f / FPS
-        n = typed_count(t)
-        while drawn < n:
-            m = MASKS[drawn]
-            if m:
-                mask.paste(m[0], (m[1], m[2]), m[0])
-            drawn += 1
-        tx, ty = cursor_target(n)
-        p = kit.ease_in_out((t - PULL_T0) / PULL_DUR) if t > PULL_T0 else 0.0
-        z = Z_CLOSE + (Z_FAR - Z_CLOSE) * p
-        if p == 0:
-            cx += (tx - cx) * 0.14
-            cy += (ty - 110 - cy) * 0.10
-            ccx, ccy = cx, cy
-        else:
-            q = min(1, p / 0.6)
-            ccx, ccy = cx + (W / 2 - cx) * q, cy + (H / 2 - cy) * q
-        if z >= 1:
-            ww, wh = PW / z, PH / z
-            x0 = min(max(ccx * S - ww / 2, 0), PW - ww)
-            y0 = min(max(ccy * S - wh / 2, 0), PH - wh)
-            if n and t - KEY_T[n - 1] < 0.035 and t < PULL_T0:  # tiny strike jolt
-                y0 = min(y0 + 1.5 * S, PH - wh)
-            box = tuple(int(round(v)) for v in (x0, y0, x0 + ww, y0 + wh))
-            ink = ImageChops.multiply(mask.crop(box), GRAIN.crop(box))
-            fr = Image.composite(INK_FILL.crop(box), PAPER.crop(box), ink).resize((W, H), Image.LANCZOS)
-            fr = fr.convert("RGBA")
-            fr.alpha_composite(TOP_FADE)
-            ty1, ty2 = 196, 254
-        else:
-            key = None if t >= MARK_T0 - 0.05 else n
-            if full is None or key is None or key != full_key:
-                full, full_key = compose_page(n, t).resize((W, H), Image.LANCZOS), key
-            fr = Image.new("RGBA", (W, H), DESK + (255,))
-            sw, sh = int(W * z), int(H * z)
-            sx, sy = (W - sw) // 2, (H - sh) // 2
-            sh_img = SHADOW.resize((int(SHADOW.width * z), int(SHADOW.height * z)))
-            fr.paste((0, 0, 0), (sx - int(100 * z), sy - int(100 * z)), sh_img)
-            fr.paste(full.resize((sw, sh), Image.LANCZOS), (sx, sy))
-            # the tag rides on the paper as it shrinks
-            ty1, ty2 = sy + 196 * z, sy + 254 * z
-        place(fr, TAG_INK, W / 2, ty1, 1, rise=0)
-        place(fr, TAG_INK_SUB, W / 2, ty2, 1, rise=0)
-        yield fr
-
-
-# --------------------------------------------------------------------------- end card
 
 E_NEXT = serif_layer(["Day 9: my skin story."], 58, INK, weight=500, italic=True)
 
@@ -345,14 +238,69 @@ def s_end(t, T):
     return fr
 
 
-CUES = dict(keys=[(float(t), CHARS[i][2]) for i, t in enumerate(KEY_T)], returns=RETURN_T,
-            type_end=TYPE_END, pull=PULL_T0, marks=[(mt, MARK_DUR, pen) for mt, (_, pen) in zip(MARK_T, MARKS)],
-            sign=(SIGN_T0, SIGN_DUR))
+# --------------------------------------------------------------------------- timeline
+
+SCENES = [
+    dict(still="pour", dur=3.2, z=(1.00, 1.10), pan=(0, 30), focus=0.5,
+         live=lambda img, o: flow(img, o, ([212, 300, 470], [345, 322, 296]), (212, 470), 26),
+         overlay=lower(["What goes into", "one bottle?"], 108, ["The journey of a formula."], hook=True)),
+    dict(still="mix", dur=3.0, z=(1.08, 1.0), pan=(0, -20),
+         live=lambda img, o: vortex(img, o, (281, 568), 250, 95),
+         overlay=lower(["Mixed slowly.", "Never rushed."])),
+    dict(still="test", dur=3.0, z=(1.0, 1.09), pan=(-24, 0), focus=0.45,
+         overlay=lower(["Tested before", "it's trusted."])),
+    dict(still="fill", dur=2.6, z=(1.02, 1.08), pan=(70, 0),
+         overlay=lower(["Filled with care."])),
+    dict(still="cap", dur=2.6, z=(1.08, 1.02), pan=(-60, 0),
+         overlay=lower(["Sealed to stay fresh."], 96)),
+    dict(still="label", dur=2.6, z=(1.0, 1.07), pan=(40, 10),
+         overlay=lower(["Packaging", "comes last."], 100, ["The formula always comes first."])),
+    dict(still="row", dur=2.8, z=(1.06, 1.0), pan=(-30, 0), focus=0.5,
+         overlay=lower(["Simple. Honest.", "Explained."], 104, y=1500)),
+    dict(still="hero", dur=3.4, z=(1.0, 1.08), pan=(0, -20),
+         overlay=lower(["Skincare products,", "coming soon."], 96, ["Follow the journey."], y=1480)),
+    dict(card=s_end, dur=4.5),
+]
+
+
+def scene_dur(sc):
+    return sc["dur"]
 
 
 def scene_timing():
-    start_end = LETTER_DUR - LAST_XFADE
-    return [0.0, start_end], start_end + END_DUR
+    durs = [scene_dur(sc) for sc in SCENES]
+    starts, offset = [0.0], 0.0
+    for i in range(1, len(durs)):
+        xf = LAST_XFADE if i == len(durs) - 1 else XFADE
+        offset += durs[i - 1] - xf
+        starts.append(offset)
+    return starts, offset + durs[-1]
+
+
+def scene_frames(i, sc):
+    T = sc["dur"]
+    n = int(round(T * FPS))
+    if "card" in sc:
+        for f in range(n):
+            yield sc["card"](f / FPS, T)
+        return
+    small, origin = portrait(sc["still"])
+    live = sc["live"](small, origin) if "live" in sc else None
+    big = plate(small) if live is None else None
+    for f in range(n):
+        t = f / FPS
+        pl = big if live is None else plate(live(t))
+        fr = camera(pl, t, T, *sc["z"], sc["pan"], seed=i)
+        if "focus" in sc and t < sc["focus"]:          # rack focus in
+            k = 1 - kit.ease_out(t / sc["focus"])
+            if k > 0.02:
+                fr = fr.filter(ImageFilter.GaussianBlur(9 * k))
+        fr = film(fr, f + 7 * i)
+        sc["overlay"](fr, t, T)
+        yield fr
+
+
+CUES = {}
 
 
 def main():
@@ -362,28 +310,34 @@ def main():
 
     os.makedirs(OUT, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="spot_day08_")
-    parts = [os.path.join(tmp, "letter.mp4"), os.path.join(tmp, "end.mp4")]
-    enc = kit.encoder(parts[0])
-    for fr in letter_frames():
-        enc.stdin.write(fr.convert("RGB").tobytes())
-    enc.stdin.close()
-    enc.wait()
-    print(f"letter rendered ({LETTER_DUR:.1f}s)")
-    enc = kit.encoder(parts[1])
-    for f in range(int(round(END_DUR * FPS))):
-        enc.stdin.write(s_end(f / FPS, END_DUR).convert("RGB").tobytes())
-    enc.stdin.close()
-    enc.wait()
+    parts = []
+    for i, sc in enumerate(SCENES):
+        p = os.path.join(tmp, f"scene{i}.mp4")
+        enc = kit.encoder(p)
+        for fr in scene_frames(i, sc):
+            enc.stdin.write(fr.convert("RGB").tobytes())
+        enc.stdin.close()
+        enc.wait()
+        parts.append(p)
+        print(f"scene {i + 1}/{len(SCENES)} rendered ({sc['dur']:.1f}s)")
 
     starts, total = scene_timing()
     score_path = score.compose(starts, total, CUES, os.path.join(OUT, "spot_day08_music.wav"))
     print(f"wrote {score_path}")
 
+    inputs = []
+    for p in parts:
+        inputs += ["-i", p]
+    chain, last = [], "[0:v]"
+    for i in range(1, len(parts)):
+        xf = LAST_XFADE if i == len(parts) - 1 else XFADE
+        out = f"[v{i}]"
+        chain.append(f"{last}[{i}:v]xfade=transition=fade:duration={xf}:offset={starts[i]:.3f}{out}")
+        last = out
     video = os.path.join(tmp, "video.mp4")
     subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-i", parts[0], "-i", parts[1], "-filter_complex",
-         f"[0:v][1:v]xfade=transition=fade:duration={LAST_XFADE}:offset={starts[1]:.3f}[v]",
-         "-map", "[v]", "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
+        ["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(chain),
+         "-map", last, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
          "-profile:v", "high", "-r", str(FPS), video],
         check=True)
     for name, audio in [("spot_day08_reel.mp4", ["-i", score_path]),
