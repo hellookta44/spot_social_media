@@ -12,7 +12,7 @@ import importlib.util
 import os
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 _spec = importlib.util.spec_from_file_location("day06_render", os.path.join(HERE, "day06", "render.py"))
@@ -123,15 +123,27 @@ def cover_day07():
 
 
 def cover_day08():
-    """Founder frame lifted 210px so the face sits above the hook; the shaded bottom hides the seam."""
-    src = grab("day03", "founder_skin_test.mp4", 0.6)
-    lifted = Image.new("RGB", (W, H), (12, 9, 8))
-    lifted.paste(src, (0, -210))
-    a = np.clip((np.arange(H)[:, None] - (H - 520)) / 300, 0, 1).repeat(W, axis=1)  # fade into the fill
-    fade = Image.new("RGBA", (W, H), (12, 9, 8, 0))
-    fade.putalpha(Image.fromarray((a * 255).astype(np.uint8)))
-    lifted = Image.alpha_composite(lifted.convert("RGBA"), fade).convert("RGB")
-    return compose(cinematic(lifted), "08", ["Why I started", "SPOT."], "a note from the founder.", big_size=140)
+    """Typewritten letter cover: the hook typed big on the Day 8 paper, gold pen under SPOT."""
+    spec = importlib.util.spec_from_file_location("day08_render", os.path.join(HERE, "day08", "render.py"))
+    d8 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(d8)
+    fr = d8.PAPER.resize((W, H), Image.LANCZOS).convert("RGBA")
+    kit.place(fr, badge("08", INK), W / 2, SAFE_TOP + 110, rise=0)
+    f = ImageFont.truetype(d8.F_TYPE_BOLD, 150)
+    cw = f.getlength("M")
+    d = ImageDraw.Draw(fr)
+    lines = ["WHY I", "STARTED", "SPOT."]
+    y0 = SAFE_TOP + 300
+    for i, ln in enumerate(lines):
+        x = (W - cw * len(ln)) / 2
+        d.text((x, y0 + i * 190), ln, font=f, fill=d8.TYPE_INK)
+    x0 = (W - cw * 5) / 2
+    pts = d8.pen_stroke(x0 * 2, (x0 + cw * 5) * 2, (y0 + 2 * 190 + 165) * 2, 3)
+    d.line([(px / 2, py / 2) for px, py in pts], fill=d8.GOLD_PEN, width=9, joint="curve")
+    line = tight(d3.serif_layer(["a letter from the founder."], 74, INK, weight=500, italic=True))
+    place_box(fr, line, W / 2, top=y0 + 3 * 190 + 90)
+    place_box(fr, logo(200, dark=True), W / 2, bottom=SAFE_BOT - 40)
+    return fr.convert("RGB")
 
 
 def d3_still(day, name):
